@@ -2160,10 +2160,17 @@
         class RenderManager {
             constructor(app) {
                 this.app = app;
+                const canvas = document.createElement('canvas');
                 this.renderer = new THREE.WebGLRenderer({
+                    canvas: canvas,
                     antialias: true,
-                    powerPreference: "high-performance"
+                    powerPreference: "high-performance",
+                    alpha: false,
+                    stencil: false,
+                    depth: true,
+                    failIfMajorPerformanceCaveat: false
                 });
+                this.renderer.setPixelRatio(window.devicePixelRatio);
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.setClearColor(0x1a1a1a);
 
