@@ -965,6 +965,11 @@
 
                 this.app.scene.add(block);
 
+                block.matrixAutoUpdate = false;
+                block.updateMatrix();
+                edgeLines.matrixAutoUpdate = false;
+                edgeLines.updateMatrix();
+
                 const blockInfo = {
                     object: block,
                     position: position.clone(),
@@ -1006,6 +1011,14 @@
                     }
 
                     const blockInfo = this.grid[pos.y][pos.x][pos.z];
+
+                    if (blockInfo.object.geometry && blockInfo.object.geometry !== this.sharedGeometry) {
+                        blockInfo.object.geometry.dispose();
+                    }
+                    if (blockInfo.object.material && !Object.values(this.materials).includes(blockInfo.object.material)) {
+                        blockInfo.object.material.dispose();
+                    }
+
                     this.app.scene.remove(blockInfo.object);
                     this.grid[pos.y][pos.x][pos.z] = null;
 
@@ -2147,7 +2160,10 @@
         class RenderManager {
             constructor(app) {
                 this.app = app;
-                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer = new THREE.WebGLRenderer({
+                    antialias: true,
+                    powerPreference: "high-performance"
+                });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.setClearColor(0x1a1a1a);
 
