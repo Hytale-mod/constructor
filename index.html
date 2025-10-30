@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weapon Constructor v2.0</title>
@@ -2160,17 +2161,7 @@
         class RenderManager {
             constructor(app) {
                 this.app = app;
-                const canvas = document.createElement('canvas');
-                this.renderer = new THREE.WebGLRenderer({
-                    canvas: canvas,
-                    antialias: true,
-                    powerPreference: "high-performance",
-                    alpha: false,
-                    stencil: false,
-                    depth: true,
-                    failIfMajorPerformanceCaveat: false
-                });
-                this.renderer.setPixelRatio(window.devicePixelRatio);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.setClearColor(0x1a1a1a);
 
