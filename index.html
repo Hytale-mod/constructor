@@ -915,6 +915,26 @@
                 this.tempVec1 = new THREE.Vector3();
                 this.tempVec2 = new THREE.Vector3();
                 this.tempVec3 = new THREE.Vector3();
+
+                this.sharedGeometry = new THREE.BoxGeometry(1, 1, 1);
+                this.sharedEdgesGeometry = new THREE.EdgesGeometry(this.sharedGeometry);
+                this.materials = {
+                    wood: new THREE.MeshPhongMaterial({
+                        color: CONSTANTS.COLORS.wood,
+                        shininess: 30
+                    }),
+                    metal: new THREE.MeshPhongMaterial({
+                        color: CONSTANTS.COLORS.metal,
+                        shininess: 100
+                    }),
+                    magic: new THREE.MeshPhongMaterial({
+                        color: CONSTANTS.COLORS.magic,
+                        emissive: 0x00BFFF,
+                        emissiveIntensity: 0.3,
+                        shininess: 30
+                    })
+                };
+                this.edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
             }
 
             placeBlock(material, position, updateAnalysis = true, skipAdjacencyCheck = false) {
@@ -932,22 +952,14 @@
                     return true;
                 }
 
-                const geometry = new THREE.BoxGeometry(1, 1, 1);
-                const blockMaterial = new THREE.MeshPhongMaterial({
-                    color: CONSTANTS.COLORS[material],
-                    transparent: this.app.state.isTransparent,
-                    opacity: this.app.state.isTransparent ? 0.7 : 1,
-                    emissive: material === 'magic' ? 0x00BFFF : 0x000000,
-                    emissiveIntensity: material === 'magic' ? this.app.lighting.magicEmissionIntensity : 0,
-                    shininess: material === 'metal' ? 100 : 30
-                });
+                const block = new THREE.Mesh(
+                    this.sharedGeometry,
+                    this.materials[material].clone()
+                );
 
-                const block = new THREE.Mesh(geometry, blockMaterial);
                 block.position.set(position.x + 0.5, position.y + 0.5, position.z + 0.5);
 
-                const edges = new THREE.EdgesGeometry(geometry);
-                const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
-                const edgeLines = new THREE.LineSegments(edges, edgesMaterial);
+                const edgeLines = new THREE.LineSegments(this.sharedEdgesGeometry, this.edgesMaterial);
                 edgeLines.visible = this.app.state.isOutlineEnabled;
                 block.add(edgeLines);
 
@@ -2167,6 +2179,16 @@
                 }
             }
 
+            updateTransparencyMode() {
+                this.app.blocks.placedBlocks.forEach(block => {
+                    const material = block.object.material;
+                    material.transparent = this.app.state.isTransparent;
+                    material.opacity = this.app.state.isTransparent ? 0.7 : 1;
+                    material.wireframe = this.app.state.isTransparent;
+                    material.needsUpdate = true;
+                });
+            }
+
             updateBlockVisibility() {
                 this.app.camera.camera.updateMatrixWorld();
                 this.cameraViewProjectionMatrix.multiplyMatrices(
@@ -2176,30 +2198,18 @@
                 this.frustum.setFromProjectionMatrix(this.cameraViewProjectionMatrix);
 
                 this.app.blocks.placedBlocks.forEach(block => {
-                    const blockPosition = this.tempVec1.set(
+                    this.tempVec1.set(
                         block.position.x + 0.5,
                         block.position.y + 0.5,
                         block.position.z + 0.5
                     );
 
-                    block.object.visible = this.frustum.containsPoint(blockPosition);
+                    block.object.visible = this.frustum.containsPoint(this.tempVec1);
 
-                    if (block.object.visible) {
-                        const material = block.object.material;
-                        const distance = this.app.camera.camera.position.distanceTo(block.object.position);
-                        const maxDistance = Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT);
-                        const opacity = this.app.state.isTransparent ? 0.1 + (distance / maxDistance) * 0.4 : 1;
-
-                        material.transparent = this.app.state.isTransparent;
-                        material.opacity = opacity;
-                        material.wireframe = this.app.state.isTransparent;
-
-                        if (this.app.state.isCutaway) {
-                            const side = this.app.visualizer.cutPlane.plane.normal.dot(
-                                block.object.position.clone().sub(this.app.visualizer.cutPlane.position)
-                            );
-                            block.object.visible = side >= 0;
-                        }
+                    if (block.object.visible && this.app.state.isCutaway) {
+                        this.tempVec1.sub(this.app.visualizer.cutPlane.position);
+                        const side = this.app.visualizer.cutPlane.plane.normal.dot(this.tempVec1);
+                        block.object.visible = side >= 0;
                     }
                 });
             }
@@ -3143,7 +3153,10 @@
                     transparency: {
                         prop: 'isTransparent',
                         btn: 'toggle-transparency',
-                        onToggle: () => this.app.render.updateBlockVisibility()
+                        onToggle: () => {
+                            this.app.render.updateTransparencyMode();
+                            this.app.render.updateBlockVisibility();
+                        }
                     },
                     cutaway: {
                         prop: 'isCutaway',
@@ -3737,7 +3750,7 @@
                     this.camera.applyInertia();
 
                     const now = Date.now();
-                    if (!this.state.isOptimizeMode && now - this.render.lastVisibilityUpdate > 100) {
+                    if (!this.state.isOptimizeMode && now - this.render.lastVisibilityUpdate > 1000) {
                         this.render.updateBlockVisibility();
                         this.render.lastVisibilityUpdate = now;
                     }
