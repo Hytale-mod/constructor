@@ -1,0 +1,3751 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weapon Constructor v2.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/math/SimplexNoise.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SSAOShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FXAAShader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.4/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        #controls-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 350px;
+            height: 100%;
+            background-color: #2a2a2a;
+            border-left: 1px solid #3a3a3a;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        #controls-panel.collapsed {
+            transform: translateX(350px);
+        }
+
+        .toggle-btn {
+            position: fixed;
+            right: 350px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 60px;
+            background-color: #3a3a3a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px 0 0 5px;
+            z-index: 999;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 12px;
+        }
+
+        .toggle-btn:hover {
+            background-color: #4a4a4a;
+        }
+
+        .toggle-btn.collapsed {
+            right: 0;
+        }
+
+        .panel-content {
+            padding: 20px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #4CAF50;
+        }
+
+        .parameter-group {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #333;
+            border-radius: 5px;
+            border: 1px solid #444;
+        }
+
+        .group-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4CAF50;
+            font-size: 13px;
+        }
+
+        .help-toggle-btn {
+            width: 100%;
+            padding: 10px;
+            background: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            margin-bottom: 15px;
+            transition: background 0.3s;
+        }
+
+        .help-toggle-btn:hover {
+            background: #45a049;
+        }
+
+        .help-panel {
+            display: none;
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #444;
+        }
+
+        .help-panel.show {
+            display: block;
+        }
+
+        .help-panel h4 {
+            margin: 8px 0 5px 0;
+            color: #4CAF50;
+            font-size: 12px;
+        }
+
+        .help-panel p {
+            margin: 3px 0;
+            color: #ccc;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background-color 0.3s;
+            margin: 2px;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .btn-secondary {
+            background: #666;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #777;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #da190b;
+        }
+
+        .btn-toggle {
+            background: #666;
+            color: white;
+        }
+
+        .btn-toggle.active {
+            background: #4CAF50;
+        }
+
+        .btn-toggle:hover {
+            background: #777;
+        }
+
+        .btn-toggle.active:hover {
+            background: #45a049;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-toggle.active:disabled {
+            background: #4CAF50;
+            opacity: 0.5;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .btn-group-full {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .btn-group-full .btn {
+            flex: 1;
+        }
+
+        #renderer-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 350px;
+            bottom: 0;
+            transition: right 0.3s ease;
+        }
+
+        #renderer-container.expanded {
+            right: 0;
+        }
+
+        #renderer-container canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .info-container {
+            margin: 6px 0;
+            padding: 8px;
+            background: #444;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .info-label {
+            color: #aaa;
+            margin-bottom: 3px;
+        }
+
+        .info-value {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        #export-data {
+            width: 100%;
+            height: 100px;
+            background: #444;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 10px;
+        }
+
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #notification.show {
+            opacity: 0.9;
+        }
+
+        #notification.success {
+            background-color: #4CAF50;
+        }
+
+        #notification.error {
+            background-color: #f44336;
+        }
+
+        #notification.warning {
+            background-color: #ff9800;
+        }
+
+        .material-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 1001;
+            font-size: 14px;
+        }
+
+        .material-wood {
+            color: #8B4513;
+        }
+
+        .material-metal {
+            color: #C0C0C0;
+        }
+
+        .material-magic {
+            color: #00BFFF;
+        }
+
+        #gallery-panel {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100%;
+            background-color: #2a2a2a;
+            border-right: 1px solid #3a3a3a;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #gallery-panel.collapsed {
+            transform: translateX(-280px);
+        }
+
+        .gallery-header {
+            padding: 15px;
+            border-bottom: 1px solid #3a3a3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .gallery-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #4CAF50;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 10px;
+        }
+
+        .gallery-grid {
+            padding: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .gallery-item {
+            position: relative;
+            aspect-ratio: 1;
+            border: 2px solid #444;
+            border-radius: 5px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .gallery-item:hover {
+            border-color: #4CAF50;
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-item-delete {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background: #f44336;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gallery-item:hover .gallery-item-delete {
+            opacity: 1;
+        }
+
+        .gallery-toggle-btn {
+            position: fixed;
+            left: 280px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 60px;
+            background-color: #3a3a3a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0 5px 5px 0;
+            z-index: 999;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 12px;
+        }
+
+        .gallery-toggle-btn:hover {
+            background-color: #4a4a4a;
+        }
+
+        .gallery-toggle-btn.collapsed {
+            left: 0;
+        }
+
+        #renderer-container {
+            left: 280px;
+            transition: left 0.3s ease;
+        }
+
+        #renderer-container.gallery-expanded {
+            left: 0;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .gallery-header {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .gallery-item.cloud {
+            border-color: #4CAF50;
+        }
+
+        .gallery-item.cloud::after {
+            content: '☁';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            color: #4CAF50;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="controls-panel">
+        <div class="panel-content">
+            <div class="panel-title">Weapon Constructor v2.0</div>
+
+            <button id="help-toggle" class="help-toggle-btn">ℹ️ Show Controls Help</button>
+
+            <div id="help-panel" class="help-panel">
+                <h4>Materials:</h4>
+                <p><strong>1/2/3:</strong> Wood/Metal/Magic</p>
+
+                <h4>Camera:</h4>
+                <p><strong>Arrow Keys:</strong> Rotate view</p>
+                <p><strong>Mouse Wheel:</strong> Zoom</p>
+                <p><strong>Right Mouse:</strong> Drag rotate</p>
+                <p><strong>R:</strong> Reset camera</p>
+                <p><strong>F:</strong> Toggle fixed pivot</p>
+                <p><strong>L + Mouse:</strong> Control light</p>
+
+                <h4>Building:</h4>
+                <p><strong>W/S:</strong> Move forward/backward</p>
+                <p><strong>D/A:</strong> Move right/left</p>
+                <p><strong>E/Q:</strong> Move up/down</p>
+                <p><strong>Space/Click:</strong> Place block</p>
+                <p><strong>Left CTRL (hold):</strong> Delete mode</p>
+
+                <h4>Grip:</h4>
+                <p><strong>H:</strong> Toggle grip mode</p>
+                <p><small>W/A/S/D/E/Q: Move grip</small></p>
+
+                <h4>Symmetry:</h4>
+                <p><strong>X/Y/Z:</strong> Toggle symmetry planes</p>
+                <p><small>Shift + W/A/S/D/E/Q: Move center</small></p>
+
+                <h4>View Modes:</h4>
+                <p><strong>B:</strong> Toggle bold outlines</p>
+                <p><strong>G:</strong> Toggle grid</p>
+                <p><strong>T:</strong> Toggle transparency</p>
+                <p><strong>V:</strong> Toggle optimize mode</p>
+
+                <h4>Cutaway:</h4>
+                <p><strong>C:</strong> Toggle cutaway</p>
+                <p><strong>X/Y/Z:</strong> Switch cutplane axis</p>
+                <p><strong>E/Q:</strong> Move cutplane</p>
+            </div>
+
+            <div class="parameter-group">
+                <div class="group-title">Material Selection</div>
+                <div class="btn-group">
+                    <button id="material-wood" class="btn btn-toggle active" data-material="wood">Wood (1)</button>
+                    <button id="material-metal" class="btn btn-toggle" data-material="metal">Metal (2)</button>
+                    <button id="material-magic" class="btn btn-toggle" data-material="magic">Magic (3)</button>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <div class="group-title">Build & View</div>
+                <div class="btn-group-full">
+                    <button id="grip-mode" class="btn btn-toggle">Set Grip (H)</button>
+                    <button id="reset-camera" class="btn btn-secondary">Reset (R)</button>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <div class="group-title">Symmetry (X/Y/Z keys)</div>
+                <div class="btn-group">
+                    <button id="symmetry-x" class="btn btn-toggle" data-axis="z">X-Axis (X)</button>
+                    <button id="symmetry-y" class="btn btn-toggle" data-axis="x">Y-Axis (Y)</button>
+                    <button id="symmetry-z" class="btn btn-toggle" data-axis="y">Z-Axis (Z)</button>
+                </div>
+                <small style="color: #aaa; font-size: 10px; margin-top: 5px; display: block;">
+                    Shift + Arrow keys to move center
+                </small>
+            </div>
+
+            <div class="parameter-group">
+                <div class="group-title">Visualization</div>
+                <div class="btn-group">
+                    <button id="toggle-outline" class="btn btn-toggle active">Bold outlines (B)</button>
+                    <button id="toggle-transparency" class="btn btn-toggle">Trans (T)</button>
+                    <button id="toggle-cutaway" class="btn btn-toggle">Cut (C)</button>
+                </div>
+                <div class="btn-group" style="margin-top: 6px;">
+                    <button id="toggle-grid" class="btn btn-toggle active">Grid (G)</button>
+                    <button id="toggle-fixed-pivot" class="btn btn-toggle">Fixed Pivot (F)</button>
+                    <button id="toggle-postfx" class="btn btn-toggle active">Post FX</button>
+                </div>
+                <div style="margin-top: 10px; font-size: 11px;">
+                    <label style="color: #aaa;">Ambient Light: <span id="ambient-value">0.25</span></label>
+                    <input type="range" id="ambient-slider" min="0" max="100" value="25" style="width: 100%;">
+
+                    <label style="color: #aaa; margin-top: 5px; display: block;">Directional Light (L): <span
+                            id="directional-value">0.50</span></label>
+                    <input type="range" id="directional-slider" min="0" max="100" value="50" style="width: 100%;">
+
+                    <label style="color: #aaa; margin-top: 5px; display: block;">Magic Glow: <span
+                            id="magic-value">0.30</span></label>
+                    <input type="range" id="magic-slider" min="0" max="100" value="30" style="width: 100%;">
+                    <label style="color: #aaa; margin-top: 5px; display: block;">Point Lights: <span
+                            id="point-value">0.30</span></label>
+                    <input type="range" id="point-slider" min="0" max="100" value="30" style="width: 100%;">
+                    <div class="btn-group-full">
+                        <button id="optimize-mode" class="btn btn-toggle">Optimize View (V)</button>
+                    </div>
+                    <small style="color: #aaa; font-size: 10px; margin-top: 5px; display: block;">
+                        Enables greedy meshing & real reflections (disables editing)
+                    </small>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <div class="group-title">Export/Import & Stats</div>
+                <textarea id="export-data" placeholder="Weapon data will appear here"></textarea>
+
+                <div class="btn-group-full">
+                    <button id="export-weapon" class="btn btn-primary">Export</button>
+                    <button id="import-weapon" class="btn btn-secondary">Import</button>
+                </div>
+
+                <div class="btn-group-full">
+                    <button id="save-weapon" class="btn btn-secondary">Save</button>
+                    <button id="clear-weapon" class="btn btn-danger">Clear All</button>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <div class="group-title">Physics Properties</div>
+                <button id="calculate-physics" class="btn btn-primary" style="width: 100%;">Calculate Physics</button>
+
+                <div class="btn-group-full">
+                    <button id="analyze-weapon" class="btn btn-toggle">Damage Analysis</button>
+                </div>
+
+                <div class="info-container">
+                    <div class="info-label">Total Mass:</div>
+                    <div id="total-mass" class="info-value">0.0 g</div>
+                </div>
+                <div class="info-container">
+                    <div class="info-label">Center of Mass:</div>
+                    <div id="center-of-mass" class="info-value">(0, 0, 0)</div>
+                </div>
+                <div class="info-container">
+                    <div class="info-label">Center of Percussion:</div>
+                    <div id="center-of-percussion" class="info-value">(0, 0, 0)</div>
+                </div>
+                <div class="info-container">
+                    <div class="info-label">Grip Position:</div>
+                    <div id="grip-position" class="info-value">(16, 32, 8)</div>
+                </div>
+                <div class="info-container">
+                    <div class="info-label">Inertia (X/Y/Z):</div>
+                    <div class="info-value">
+                        <span id="inertia-x">0.000</span> /
+                        <span id="inertia-y">0.000</span> /
+                        <span id="inertia-z">0.000</span>
+                    </div>
+                </div>
+                <div class="info-container">
+                    <div class="info-label">Strike / Thrust Velocity:</div>
+                    <div class="info-value">
+                        <span id="strike-velocity">0.00</span> /
+                        <span id="thrust-velocity">0.00</span> m/s
+                    </div>
+                </div>
+                <div class="info-container">
+                    <div class="info-label">Effective Mass:</div>
+                    <div id="effective-mass" class="info-value">0.00 g</div>
+                </div>
+            </div>
+
+            <div class="parameter-group">
+                <div class="group-title">Statistics</div>
+                <div class="info-container">
+                    <div class="info-label">Block Count:</div>
+                    <div id="block-count" class="info-value">0</div>
+                </div>
+                <div class="info-container">
+                    <div class="info-label">Wood / Metal / Magic:</div>
+                    <div class="info-value">
+                        <span id="wood-count">0</span> /
+                        <span id="metal-count">0</span> /
+                        <span id="magic-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toggle-panel" class="toggle-btn">▶</div>
+
+    <div id="gallery-panel">
+        <div class="gallery-header">
+            <h3>Models Gallery</h3>
+            <div class="auth-buttons">
+                <button id="login-btn" class="btn btn-primary btn-sm">Login</button>
+                <button id="logout-btn" class="btn btn-secondary btn-sm" style="display: none;">Logout</button>
+                <span id="user-info" style="display: none; font-size: 10px; color: #aaa;"></span>
+            </div>
+            <button id="toggle-gallery" class="btn btn-secondary btn-sm">Hide</button>
+        </div>
+        <div style="padding: 10px; border-bottom: 1px solid #3a3a3a;">
+            <button id="sync-btn" class="btn btn-primary" style="width: 100%; display: none;">Sync with Cloud</button>
+        </div>
+        <div id="gallery-content" class="gallery-grid">
+            <!-- Превью будут добавляться динамически -->
+        </div>
+    </div>
+
+    <div id="gallery-toggle-btn" class="gallery-toggle-btn">◀</div>
+
+    <div id="renderer-container"></div>
+
+    <div id="material-indicator" class="material-indicator">
+        <span id="current-material">Wood (1)</span>
+    </div>
+
+    <div id="notification"></div>
+
+    <script>
+        const CONSTANTS = {
+            GRID: { WIDTH: 16, LENGTH: 32, HEIGHT: 64 },
+            PHYSICS: {
+                WOOD_MASS: 1,
+                IRON_MASS: 11,
+                STONE_MASS: 4,
+                ARM_LENGTH: 0.7,
+                ARM_MASS: 4.2,
+                GRAVITY: 9.81,
+                MUSCLE_TORQUE: 100,
+                BLOCK_SIZE: 0.032
+            },
+            MATERIALS: {
+                wood: { PIERCING: 0.6, SLASHING: 0.5, BLUNT: 0.8 },
+                metal: { PIERCING: 1.0, SLASHING: 1.0, BLUNT: 1.0 },
+                magic: { PIERCING: 0.8, SLASHING: 0.7, BLUNT: 0.9 }
+            },
+            COLORS: {
+                wood: 0x8B4513,
+                metal: 0xC0C0C0,
+                magic: 0x00BFFF
+            },
+            MATERIALS_ARRAY: ['wood', 'metal', 'magic']
+        };
+
+        class Utils {
+            static showNotification(message, type = 'success') {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.className = `${type} show`;
+                setTimeout(() => notification.classList.remove('show'), 3000);
+            }
+
+            static compressWeaponData(data) {
+                try {
+                    const grid = new Array(CONSTANTS.GRID.HEIGHT).fill().map(() =>
+                        new Array(CONSTANTS.GRID.LENGTH).fill().map(() =>
+                            new Array(CONSTANTS.GRID.WIDTH).fill(0)
+                        )
+                    );
+
+                    data.blocks.forEach(block => {
+                        grid[block.y][block.x][block.z] = CONSTANTS.MATERIALS_ARRAY.indexOf(block.material) + 1;
+                    });
+
+                    const flatGrid = new Uint8Array(CONSTANTS.GRID.WIDTH * CONSTANTS.GRID.LENGTH * CONSTANTS.GRID.HEIGHT);
+                    let index = 0;
+                    for (let y = 0; y < CONSTANTS.GRID.HEIGHT; y++) {
+                        for (let x = 0; x < CONSTANTS.GRID.LENGTH; x++) {
+                            for (let z = 0; z < CONSTANTS.GRID.WIDTH; z++) {
+                                flatGrid[index++] = grid[y][x][z];
+                            }
+                        }
+                    }
+
+                    const rleCompressed = [];
+                    let currentValue = flatGrid[0];
+                    let count = 1;
+
+                    for (let i = 1; i < flatGrid.length; i++) {
+                        if (flatGrid[i] === currentValue && count < 255) {
+                            count++;
+                        } else {
+                            rleCompressed.push(currentValue, count);
+                            currentValue = flatGrid[i];
+                            count = 1;
+                        }
+                    }
+                    rleCompressed.push(currentValue, count);
+
+                    const header = [255, data.gripPosition.x, data.gripPosition.y, data.gripPosition.z];
+                    const fullData = new Uint8Array(header.length + rleCompressed.length);
+                    fullData.set(header);
+                    fullData.set(rleCompressed, header.length);
+
+                    const deflated = pako.deflate(fullData);
+                    const binaryString = Array.from(deflated).map(byte => String.fromCharCode(byte)).join('');
+                    return btoa(binaryString);
+                } catch (error) {
+                    console.error('Compression error:', error);
+                    return null;
+                }
+            }
+
+            static decompressWeaponData(compressed) {
+                try {
+                    const decoded = atob(compressed);
+                    const charCodes = new Uint8Array(decoded.length);
+                    for (let i = 0; i < decoded.length; i++) {
+                        charCodes[i] = decoded.charCodeAt(i);
+                    }
+                    const inflated = pako.inflate(charCodes);
+
+                    let gripPosition = null;
+                    let rleData = inflated;
+
+                    if (inflated[0] === 255) {
+                        gripPosition = { x: inflated[1], y: inflated[2], z: inflated[3] };
+                        rleData = inflated.slice(4);
+                    }
+
+                    const decompressed = new Uint8Array(CONSTANTS.GRID.WIDTH * CONSTANTS.GRID.LENGTH * CONSTANTS.GRID.HEIGHT);
+                    let writeIndex = 0;
+                    for (let i = 0; i < rleData.length; i += 2) {
+                        const value = rleData[i];
+                        const count = rleData[i + 1];
+                        decompressed.fill(value, writeIndex, writeIndex + count);
+                        writeIndex += count;
+                    }
+
+                    const blocks = [];
+                    let readIndex = 0;
+                    for (let y = 0; y < CONSTANTS.GRID.HEIGHT; y++) {
+                        for (let x = 0; x < CONSTANTS.GRID.LENGTH; x++) {
+                            for (let z = 0; z < CONSTANTS.GRID.WIDTH; z++) {
+                                const value = decompressed[readIndex++];
+                                if (value > 0) {
+                                    blocks.push({
+                                        x, y, z,
+                                        material: CONSTANTS.MATERIALS_ARRAY[value - 1]
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    return {
+                        version: gripPosition ? "2.0+" : "1.0 (legacy)",
+                        blocks: blocks,
+                        gripPosition: gripPosition || {
+                            x: Math.floor(CONSTANTS.GRID.LENGTH / 2),
+                            y: Math.floor(CONSTANTS.GRID.HEIGHT / 2),
+                            z: Math.floor(CONSTANTS.GRID.WIDTH / 2)
+                        },
+                        metadata: {
+                            blockCount: blocks.length,
+                            created: new Date().toISOString(),
+                            legacy: !gripPosition
+                        }
+                    };
+                } catch (error) {
+                    console.error('Decompression error:', error);
+                    return null;
+                }
+            }
+
+            static throttle(func, limit) {
+                let lastRan;
+                return function () {
+                    const args = arguments;
+                    const context = this;
+                    const now = Date.now();
+                    if (!lastRan || (now - lastRan) >= limit) {
+                        func.apply(context, args);
+                        lastRan = now;
+                    }
+                }
+            }
+
+            static clampPosition(pos, minVec, maxVec) {
+                return new THREE.Vector3(
+                    Math.max(minVec.x, Math.min(maxVec.x, pos.x)),
+                    Math.max(minVec.y, Math.min(maxVec.y, pos.y)),
+                    Math.max(minVec.z, Math.min(maxVec.z, pos.z))
+                );
+            }
+
+            static createSphere(radius, color, options = {}) {
+                const geometry = new THREE.SphereGeometry(radius, options.segments || 16, options.segments || 8);
+                const material = new THREE.MeshBasicMaterial({ color: color, ...options });
+                return new THREE.Mesh(geometry, material);
+            }
+        }
+
+        class DOMCache {
+            constructor() {
+                this.elements = {};
+                this.cacheElements();
+            }
+
+            cacheElements() {
+                const ids = [
+                    'help-toggle', 'help-panel', 'toggle-panel', 'controls-panel',
+                    'material-indicator', 'current-material', 'grip-position',
+                    'total-mass', 'center-of-mass', 'center-of-percussion',
+                    'inertia-x', 'inertia-y', 'inertia-z',
+                    'strike-velocity', 'thrust-velocity', 'effective-mass',
+                    'block-count', 'wood-count', 'metal-count', 'magic-count',
+                    'export-data', 'ambient-slider', 'ambient-value',
+                    'directional-slider', 'directional-value',
+                    'magic-slider', 'magic-value', 'point-slider', 'point-value',
+                    'renderer-container'
+                ];
+
+                ids.forEach(id => {
+                    this.elements[id] = document.getElementById(id);
+                });
+            }
+
+            get(id) {
+                return this.elements[id];
+            }
+        }
+
+        class BlockManager {
+            constructor(app) {
+                this.app = app;
+                this.grid = new Array(CONSTANTS.GRID.HEIGHT).fill().map(() =>
+                    new Array(CONSTANTS.GRID.LENGTH).fill().map(() =>
+                        new Array(CONSTANTS.GRID.WIDTH).fill(null)
+                    )
+                );
+                this.placedBlocks = [];
+                this.blockInfoMap = new Map();
+                this.blockObjects = [];
+                this.tempVec1 = new THREE.Vector3();
+                this.tempVec2 = new THREE.Vector3();
+                this.tempVec3 = new THREE.Vector3();
+            }
+
+            placeBlock(material, position, updateAnalysis = true, skipAdjacencyCheck = false) {
+                if (!this.isValidPosition(position) ||
+                    this.grid[position.y][position.x][position.z] !== null ||
+                    (!skipAdjacencyCheck && this.placedBlocks.length > 0 && !this.isAdjacentToExistingBlock(position))) {
+                    return false;
+                }
+
+                if (this.app.state.isGripMode) {
+                    this.app.state.gripPosition.copy(position);
+                    this.app.visualizer.updateGripSphere();
+                    this.app.ui.updateGripPositionDisplay();
+                    this.app.visualizer.updateHandPosition();
+                    return true;
+                }
+
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const blockMaterial = new THREE.MeshPhongMaterial({
+                    color: CONSTANTS.COLORS[material],
+                    transparent: this.app.state.isTransparent,
+                    opacity: this.app.state.isTransparent ? 0.7 : 1,
+                    emissive: material === 'magic' ? 0x00BFFF : 0x000000,
+                    emissiveIntensity: material === 'magic' ? this.app.lighting.magicEmissionIntensity : 0,
+                    shininess: material === 'metal' ? 100 : 30
+                });
+
+                const block = new THREE.Mesh(geometry, blockMaterial);
+                block.position.set(position.x + 0.5, position.y + 0.5, position.z + 0.5);
+
+                const edges = new THREE.EdgesGeometry(geometry);
+                const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                const edgeLines = new THREE.LineSegments(edges, edgesMaterial);
+                edgeLines.visible = this.app.state.isOutlineEnabled;
+                block.add(edgeLines);
+
+                this.app.scene.add(block);
+
+                const blockInfo = {
+                    object: block,
+                    position: position.clone(),
+                    type: material
+                };
+
+                this.placedBlocks.push(blockInfo);
+                this.blockObjects.push(block);
+                this.grid[position.y][position.x][position.z] = blockInfo;
+                this.blockInfoMap.set(`${position.x},${position.y},${position.z}`, blockInfo);
+
+                const mirrorPositions = this.getMirrorPositions(position);
+                mirrorPositions.forEach(mirrorPos => {
+                    if (this.isValidPosition(mirrorPos) && this.grid[mirrorPos.y][mirrorPos.x][mirrorPos.z] === null) {
+                        this.placeBlock(material, mirrorPos, false, true);
+                    }
+                });
+
+                this.app.visualizer.updateHighlightedCell();
+                this.app.render.updateBlockVisibility();
+                this.app.ui.updateStatistics();
+                this.app.saveLoad.autoSaveWeapon();
+
+                if (updateAnalysis && this.app.state.isAnalyzeMode) {
+                    this.app.physics.analyzeWeapon();
+                }
+
+                return true;
+            }
+
+            deleteBlock(position) {
+                if (!this.isValidPosition(position) || this.grid[position.y][position.x][position.z] === null) {
+                    return false;
+                }
+
+                const deleteBlockAt = (pos) => {
+                    if (!this.isValidPosition(pos) || this.grid[pos.y][pos.x][pos.z] === null) {
+                        return;
+                    }
+
+                    const blockInfo = this.grid[pos.y][pos.x][pos.z];
+                    this.app.scene.remove(blockInfo.object);
+                    this.grid[pos.y][pos.x][pos.z] = null;
+
+                    const index = this.placedBlocks.indexOf(blockInfo);
+                    if (index > -1) {
+                        this.placedBlocks.splice(index, 1);
+                    }
+
+                    const objIndex = this.blockObjects.indexOf(blockInfo.object);
+                    if (objIndex > -1) {
+                        this.blockObjects.splice(objIndex, 1);
+                    }
+
+                    this.blockInfoMap.delete(`${pos.x},${pos.y},${pos.z}`);
+                };
+
+                deleteBlockAt(position);
+
+                const mirrorPositions = this.getMirrorPositions(position);
+                mirrorPositions.forEach(mirrorPos => deleteBlockAt(mirrorPos));
+
+                this.app.visualizer.updateHighlightedCell();
+                this.app.render.updateBlockVisibility();
+                this.app.ui.updateStatistics();
+                this.app.saveLoad.autoSaveWeapon();
+
+                if (this.app.state.isAnalyzeMode) {
+                    this.app.physics.analyzeWeapon();
+                }
+
+                return true;
+            }
+
+            getMirrorPositions(position) {
+                const positions = [];
+                const { x, y, z } = position;
+                const sym = this.app.state.symmetryMode;
+                const center = this.app.state.symmetryCenter;
+
+                if (sym.x) {
+                    const mx = 2 * center.x - x;
+                    positions.push(new THREE.Vector3(mx, y, z));
+
+                    if (sym.y) {
+                        const my = 2 * center.y - y;
+                        positions.push(new THREE.Vector3(mx, my, z));
+                    }
+                    if (sym.z) {
+                        const mz = 2 * center.z - z;
+                        positions.push(new THREE.Vector3(mx, y, mz));
+
+                        if (sym.y) {
+                            const my = 2 * center.y - y;
+                            positions.push(new THREE.Vector3(mx, my, mz));
+                        }
+                    }
+                }
+
+                if (sym.y) {
+                    const my = 2 * center.y - y;
+                    positions.push(new THREE.Vector3(x, my, z));
+
+                    if (sym.z) {
+                        const mz = 2 * center.z - z;
+                        positions.push(new THREE.Vector3(x, my, mz));
+                    }
+                }
+
+                if (sym.z) {
+                    const mz = 2 * center.z - z;
+                    positions.push(new THREE.Vector3(x, y, mz));
+                }
+
+                return positions;
+            }
+
+            isValidPosition(position) {
+                return position.x >= 0 && position.x < CONSTANTS.GRID.LENGTH &&
+                    position.y >= 0 && position.y < CONSTANTS.GRID.HEIGHT &&
+                    position.z >= 0 && position.z < CONSTANTS.GRID.WIDTH;
+            }
+
+            isAdjacentToExistingBlock(position) {
+                const adjacentPositions = [
+                    { x: position.x + 1, y: position.y, z: position.z },
+                    { x: position.x - 1, y: position.y, z: position.z },
+                    { x: position.x, y: position.y + 1, z: position.z },
+                    { x: position.x, y: position.y - 1, z: position.z },
+                    { x: position.x, y: position.y, z: position.z + 1 },
+                    { x: position.x, y: position.y, z: position.z - 1 }
+                ];
+
+                return adjacentPositions.some(pos =>
+                    this.isValidPosition(pos) &&
+                    this.grid[pos.y][pos.x][pos.z] !== null
+                );
+            }
+
+            clearAll() {
+                this.placedBlocks.forEach(block => {
+                    this.app.scene.remove(block.object);
+                });
+
+                this.placedBlocks = [];
+                this.grid = new Array(CONSTANTS.GRID.HEIGHT).fill().map(() =>
+                    new Array(CONSTANTS.GRID.LENGTH).fill().map(() =>
+                        new Array(CONSTANTS.GRID.WIDTH).fill(null)
+                    )
+                );
+                this.blockInfoMap.clear();
+                this.blockObjects = [];
+            }
+
+            resetBlockColors() {
+                this.placedBlocks.forEach(block => {
+                    if (block.object && block.object.material) {
+                        block.object.material.color.setHex(CONSTANTS.COLORS[block.type]);
+                        block.object.material.needsUpdate = true;
+                    }
+                });
+            }
+
+            getWeaponBounds() {
+                const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+                const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+
+                this.placedBlocks.forEach(block => {
+                    min.x = Math.min(min.x, block.position.x);
+                    min.y = Math.min(min.y, block.position.y);
+                    min.z = Math.min(min.z, block.position.z);
+                    max.x = Math.max(max.x, block.position.x);
+                    max.y = Math.max(max.y, block.position.y);
+                    max.z = Math.max(max.z, block.position.z);
+                });
+
+                return { min, max };
+            }
+        }
+
+        class PhysicsCalculator {
+            constructor(app) {
+                this.app = app;
+                this.tempVec1 = new THREE.Vector3();
+                this.tempVec2 = new THREE.Vector3();
+            }
+
+            calculate() {
+                if (this.app.blocks.placedBlocks.length === 0) {
+                    Utils.showNotification("No blocks to calculate physics for", "warning");
+                    return null;
+                }
+
+                let totalMass = 0;
+                let centerOfMass = new THREE.Vector3(0, 0, 0);
+
+                this.app.blocks.placedBlocks.forEach(block => {
+                    const blockMass = this.getBlockMass(block.type);
+                    totalMass += blockMass;
+                    centerOfMass.add(block.position.clone().add(new THREE.Vector3(0.5, 0.5, 0.5)).multiplyScalar(blockMass));
+                });
+
+                if (totalMass > 0) {
+                    centerOfMass.divideScalar(totalMass);
+                }
+
+                const inertiaX = this.calculateMomentOfInertia('x', centerOfMass);
+                const inertiaY = this.calculateMomentOfInertia('y', this.app.state.gripPosition);
+                const inertiaZ = this.calculateMomentOfInertia('z', centerOfMass);
+
+                const centerOfPercussion = this.calculateCenterOfPercussion(totalMass, centerOfMass, inertiaX);
+                const strikeVelocity = this.calculateStrikeVelocity(totalMass, centerOfMass, centerOfPercussion, inertiaX);
+                const thrustVelocity = this.calculateThrustVelocity(totalMass, centerOfMass, inertiaX);
+                const effectiveMass = this.calculateEffectiveMassByGauss(centerOfPercussion);
+
+                return {
+                    totalMass,
+                    centerOfMass,
+                    centerOfPercussion,
+                    inertiaX,
+                    inertiaY,
+                    inertiaZ,
+                    strikeVelocity,
+                    thrustVelocity,
+                    effectiveMass
+                };
+            }
+
+            getBlockMass(type) {
+                switch (type) {
+                    case 'wood': return CONSTANTS.PHYSICS.WOOD_MASS;
+                    case 'metal': return CONSTANTS.PHYSICS.IRON_MASS;
+                    case 'magic': return CONSTANTS.PHYSICS.STONE_MASS;
+                    default: return 0;
+                }
+            }
+
+            calculateMomentOfInertia(axis, centerPoint) {
+                let momentOfInertia = 0;
+
+                this.app.blocks.placedBlocks.forEach(block => {
+                    const blockMass = this.getBlockMass(block.type);
+                    const blockCenter = this.tempVec1.copy(block.position).add(new THREE.Vector3(0.5, 0.5, 0.5));
+                    const r = this.tempVec2.copy(blockCenter).sub(centerPoint);
+
+                    let blockI, rPerp;
+
+                    if (axis === 'y') {
+                        rPerp = Math.sqrt(r.x * r.x + r.z * r.z);
+                        blockI = (blockMass / 6) * 2;
+                        momentOfInertia += blockI + blockMass * rPerp * rPerp;
+                    } else {
+                        blockI = (blockMass / 6) * (1 + 1 + 1);
+                        momentOfInertia += blockI + blockMass * r.lengthSq();
+                    }
+                });
+
+                return momentOfInertia * CONSTANTS.PHYSICS.BLOCK_SIZE * CONSTANTS.PHYSICS.BLOCK_SIZE * 0.001;
+            }
+
+            calculateCenterOfPercussion(totalMass, centerOfMass, momentOfInertia) {
+                const r = new THREE.Vector3().subVectors(centerOfMass, this.app.state.gripPosition);
+                const rLength = r.length() * CONSTANTS.PHYSICS.BLOCK_SIZE;
+
+                if (rLength < 0.001) {
+                    return this.findFurthestPoint(centerOfMass);
+                }
+
+                let distanceToCoP = momentOfInertia / (totalMass / 1000 * rLength);
+                let copPosition = this.app.state.gripPosition.clone().add(r.normalize().multiplyScalar(distanceToCoP / CONSTANTS.PHYSICS.BLOCK_SIZE));
+
+                const bounds = this.app.blocks.getWeaponBounds();
+                copPosition.x = Math.min(bounds.max.x, copPosition.x);
+                copPosition.y = Math.max(bounds.min.y, Math.min(bounds.max.y, copPosition.y));
+                copPosition.z = Math.max(bounds.min.z, Math.min(bounds.max.z, copPosition.z));
+
+                return copPosition;
+            }
+
+            findFurthestPoint(centerOfMass) {
+                return this.app.blocks.placedBlocks.reduce((furthest, block) => {
+                    const distance = block.position.distanceTo(centerOfMass);
+                    return distance > furthest.distance ? { position: block.position, distance } : furthest;
+                }, { position: centerOfMass, distance: 0 }).position;
+            }
+
+            calculateStrikeVelocity(totalMass, centerOfMass, centerOfPercussion, modelMomentOfInertia) {
+                const weaponMass = totalMass / 1000;
+                const totalSystemMass = weaponMass + CONSTANTS.PHYSICS.ARM_MASS;
+                const rCOM = centerOfMass.clone().sub(this.app.state.gripPosition).multiplyScalar(CONSTANTS.PHYSICS.BLOCK_SIZE).length() + CONSTANTS.PHYSICS.ARM_LENGTH;
+                const rCOP = centerOfPercussion.clone().sub(this.app.state.gripPosition).multiplyScalar(CONSTANTS.PHYSICS.BLOCK_SIZE).length() + CONSTANTS.PHYSICS.ARM_LENGTH;
+                const systemCenterOfMass = (CONSTANTS.PHYSICS.ARM_MASS * CONSTANTS.PHYSICS.ARM_LENGTH / 2 + weaponMass * rCOM) / totalSystemMass;
+                const heightChange = systemCenterOfMass * (1 - Math.cos(Math.PI / 2));
+                const potentialEnergy = totalSystemMass * CONSTANTS.PHYSICS.GRAVITY * heightChange;
+                const armMomentOfInertia = CONSTANTS.PHYSICS.ARM_MASS * (CONSTANTS.PHYSICS.ARM_LENGTH / 2) ** 2;
+                const totalMomentOfInertia = modelMomentOfInertia + armMomentOfInertia;
+                const angularVelocity = Math.sqrt(2 * potentialEnergy / totalMomentOfInertia);
+                return angularVelocity * rCOP;
+            }
+
+            calculateThrustVelocity(totalMass, centerOfMass, weaponInertia) {
+                const armMass = CONSTANTS.PHYSICS.ARM_MASS / 2;
+                const armLength = CONSTANTS.PHYSICS.ARM_LENGTH / 2;
+
+                const I_upperArm = (1 / 3) * armMass * Math.pow(armLength, 2);
+                const I_lowerArm = (1 / 3) * armMass * Math.pow(armLength, 2) +
+                    armMass * (Math.pow(armLength, 2) + Math.pow(armLength / 2, 2));
+
+                const distanceToGrip = centerOfMass.distanceTo(this.app.state.gripPosition) * CONSTANTS.PHYSICS.BLOCK_SIZE;
+                const I_weapon = weaponInertia +
+                    (totalMass / 1000) * (Math.pow(armLength, 2) + Math.pow(distanceToGrip + armLength, 2));
+
+                const I_initial = I_upperArm + I_lowerArm + I_weapon;
+                const I_final = weaponInertia;
+                const I_avg = (I_initial + I_final) / 2;
+                const alpha = CONSTANTS.PHYSICS.MUSCLE_TORQUE / I_avg;
+
+                const time = Math.sqrt(Math.PI / (2 * alpha));
+                return alpha * time * CONSTANTS.PHYSICS.ARM_LENGTH;
+            }
+
+            calculateEffectiveMassByGauss(centerOfPercussion) {
+                const maxLength = this.findMaxWeaponLength(this.app.state.gripPosition);
+                const sigma = maxLength * 0.2;
+
+                return this.app.blocks.placedBlocks.reduce((effectiveMass, block) => {
+                    const distance = block.position.distanceTo(centerOfPercussion) * CONSTANTS.PHYSICS.BLOCK_SIZE;
+                    const weight = Math.exp(-(distance * distance) / (2 * sigma * sigma));
+                    return effectiveMass + this.getBlockMass(block.type) * weight;
+                }, 0);
+            }
+
+            findMaxWeaponLength(gripPosition) {
+                return this.app.blocks.placedBlocks.reduce((maxLength, block) => {
+                    const distance = block.position.distanceTo(gripPosition) * CONSTANTS.PHYSICS.BLOCK_SIZE;
+                    return Math.max(maxLength, distance);
+                }, 0);
+            }
+
+            analyzeWeapon() {
+                if (this.app.blocks.placedBlocks.length === 0) {
+                    return;
+                }
+
+                this.app.blocks.placedBlocks.forEach(block => {
+                    const distanceFromGrip = block.position.distanceTo(this.app.state.gripPosition);
+                    const bounds = this.app.blocks.getWeaponBounds();
+                    const maxDistance = Math.max(
+                        bounds.max.x - bounds.min.x,
+                        bounds.max.y - bounds.min.y,
+                        bounds.max.z - bounds.min.z
+                    );
+
+                    if (distanceFromGrip > maxDistance * 0.7) {
+                        block.object.material.color.setHex(0xFF0000);
+                    } else if (distanceFromGrip > maxDistance * 0.3) {
+                        block.object.material.color.setHex(0x8A2BE2);
+                    } else {
+                        block.object.material.color.setHex(0x0000FF);
+                    }
+                    block.object.material.needsUpdate = true;
+                });
+            }
+        }
+
+        class InputHandler {
+            constructor(app) {
+                this.app = app;
+                this.keyMap = {
+                    'ц': 'w', 'у': 'e', 'к': 'r', 'е': 't', 'н': 'y',
+                    'г': 'u', 'ш': 'i', 'щ': 'o', 'з': 'p', 'х': '[',
+                    'ъ': ']', 'ф': 'a', 'ы': 's', 'в': 'd', 'а': 'f',
+                    'п': 'g', 'р': 'h', 'о': 'j', 'л': 'k', 'д': 'l',
+                    'ж': ';', 'э': '\'', 'я': 'z', 'ч': 'x', 'с': 'c',
+                    'м': 'v', 'и': 'b', 'т': 'n', 'ь': 'm', 'б': ',',
+                    'ю': '.', '.': '/'
+                };
+                this.isRotating = false;
+                this.previousMousePosition = { x: 0, y: 0 };
+                this.pressedKeys = new Set();
+                this.tempForward = new THREE.Vector3();
+                this.tempRight = new THREE.Vector3();
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => this.onKeyDown(e));
+                document.addEventListener('keyup', (e) => this.onKeyUp(e));
+
+                const container = this.app.dom.get('renderer-container');
+                container.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                container.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                container.addEventListener('mousemove', Utils.throttle((e) => this.onMouseMove(e), 16));
+                container.addEventListener('wheel', (e) => this.onMouseWheel(e));
+                container.addEventListener('click', (e) => this.onMouseClick(e));
+                container.addEventListener('contextmenu', (e) => e.preventDefault());
+
+                window.addEventListener('resize', () => this.app.render.updateRendererSize());
+            }
+
+            onKeyDown(event) {
+                if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+
+                const key = event.key.toLowerCase();
+                const mappedKey = this.keyMap[key] || key;
+                const code = event.code;
+                const keyIdentifier = code || mappedKey;
+
+                if (['r', 'к', 'f', 'а', 'v', 'м', 'g', 'п', 'l', 'д'].includes(mappedKey)) {
+                    if (this.pressedKeys.has(keyIdentifier)) return;
+                    this.pressedKeys.add(keyIdentifier);
+
+                    switch (mappedKey) {
+                        case 'r': case 'к':
+                            this.app.camera.resetCamera();
+                            return;
+                        case 'f': case 'а':
+                            this.app.ui.toggleFixedPivot();
+                            return;
+                        case 'v': case 'м':
+                            this.app.optimize.toggleOptimizeMode();
+                            return;
+                        case 'g': case 'п':
+                            this.app.ui.toggleGrid();
+                            return;
+                        case 'l': case 'д':
+                            if (!this.app.state.isLightControlActive) {
+                                this.app.state.isLightControlActive = true;
+                                this.app.lighting.lightHelper.visible = true;
+                            }
+                            return;
+                    }
+                }
+
+                const rotSpeed = 0.05;
+
+                switch (mappedKey) {
+                    case 'arrowup':
+                        event.preventDefault();
+                        this.app.camera.state.angleVertical += rotSpeed;
+                        this.app.camera.updateCameraPosition();
+                        return;
+                    case 'arrowdown':
+                        event.preventDefault();
+                        this.app.camera.state.angleVertical -= rotSpeed;
+                        this.app.camera.updateCameraPosition();
+                        return;
+                    case 'arrowleft':
+                        event.preventDefault();
+                        this.app.camera.state.angleHorizontal += rotSpeed;
+                        this.app.camera.updateCameraPosition();
+                        return;
+                    case 'arrowright':
+                        event.preventDefault();
+                        this.app.camera.state.angleHorizontal -= rotSpeed;
+                        this.app.camera.updateCameraPosition();
+                        return;
+
+                }
+
+                if (this.app.state.isOptimizeMode) return;
+
+
+
+                if (code === 'ControlLeft') {
+                    if (!this.app.state.isDeleteMode) {
+                        this.app.state.isDeleteMode = true;
+                        this.app.visualizer.updateHighlightedCell();
+                        this.updateCursorFromMouse();
+                    }
+
+                    return;
+                }
+
+                this.tempForward.set(
+                    Math.sin(this.app.camera.state.angleHorizontal),
+                    0,
+                    Math.cos(this.app.camera.state.angleHorizontal)
+                ).normalize();
+
+                this.tempRight.set(
+                    Math.cos(this.app.camera.state.angleHorizontal),
+                    0,
+                    -Math.sin(this.app.camera.state.angleHorizontal)
+                ).normalize();
+
+                const forward = this.tempForward;
+                const right = this.tempRight;
+
+                const target = this.app.state.isGripMode ? 'grip' : (event.shiftKey ? 'symmetry' : 'cursor');
+                let dx = 0, dy = 0, dz = 0;
+
+                switch (mappedKey) {
+                    case 'w': case 'ц':
+                        dx = -Math.round(forward.x);
+                        dz = -Math.round(forward.z);
+                        break;
+                    case 's': case 'ы':
+                        dx = Math.round(forward.x);
+                        dz = Math.round(forward.z);
+                        break;
+                    case 'd': case 'в':
+                        dx = Math.round(right.x);
+                        dz = Math.round(right.z);
+                        break;
+                    case 'a': case 'ф':
+                        dx = -Math.round(right.x);
+                        dz = -Math.round(right.z);
+                        break;
+                    case 'e': case 'у':
+                        if (this.app.state.isCutaway && !this.app.state.isGripMode && !event.shiftKey) {
+                            this.app.visualizer.moveCutPlane(1);
+                            this.app.visualizer.updateHighlightedCell();
+                            this.app.visualizer.updateGripSphere();
+                            this.app.visualizer.updateHandPosition();
+                            this.app.render.updateBlockVisibility();
+                            return;
+                        }
+                        dy = 1;
+                        break;
+                    case 'q': case 'й':
+                        if (this.app.state.isCutaway && !this.app.state.isGripMode && !event.shiftKey) {
+                            this.app.visualizer.moveCutPlane(-1);
+                            this.app.visualizer.updateHighlightedCell();
+                            this.app.visualizer.updateGripSphere();
+                            this.app.visualizer.updateHandPosition();
+                            this.app.render.updateBlockVisibility();
+                            return;
+                        }
+                        dy = -1;
+                        break;
+                }
+
+                if (dx !== 0 || dy !== 0 || dz !== 0) {
+                    if (target === 'cursor') {
+                        this.moveCursor(dx, dy, dz);
+                    } else if (target === 'grip') {
+                        this.moveGrip(dx, dy, dz);
+                    } else if (target === 'symmetry') {
+                        this.moveSymmetryCenter(dx, dy, dz);
+                    }
+                }
+
+                if (this.pressedKeys.has(keyIdentifier)) return;
+                this.pressedKeys.add(keyIdentifier);
+
+                if (mappedKey >= '1' && mappedKey <= '3') {
+                    const materials = CONSTANTS.MATERIALS_ARRAY;
+                    this.app.state.currentMaterial = materials[parseInt(mappedKey) - 1];
+                    this.app.visualizer.updateHighlightedCell();
+                    this.app.ui.updateMaterialIndicator();
+                    document.querySelectorAll('[data-material]').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.material === this.app.state.currentMaterial);
+                    });
+                    return;
+                }
+
+                switch (mappedKey) {
+                    case 'h': case 'р':
+                        this.app.ui.toggleMode('grip');
+                        return;
+                    case 'c': case 'с':
+                        this.app.ui.toggleMode('cutaway');
+                        return;
+                    case 't': case 'е':
+                        this.app.ui.toggleMode('transparency');
+                        return;
+                    case 'b': case 'и':
+                        this.app.ui.toggleMode('outline');
+                        return;
+                    case 'x': case 'ч':
+                        if (this.app.state.isCutaway) {
+                            this.app.visualizer.setCutPlaneNormal(0, 0, 1);
+                        } else {
+                            this.app.ui.toggleSymmetry('z');
+                        }
+                        return;
+                    case 'y': case 'н':
+                        if (this.app.state.isCutaway) {
+                            this.app.visualizer.setCutPlaneNormal(1, 0, 0);
+                        } else {
+                            this.app.ui.toggleSymmetry('x');
+                        }
+                        return;
+                    case 'z': case 'я':
+                        if (this.app.state.isCutaway) {
+                            this.app.visualizer.setCutPlaneNormal(0, 1, 0);
+                        } else {
+                            this.app.ui.toggleSymmetry('y');
+                        }
+                        return;
+
+                    case ' ':
+                        event.preventDefault();
+                        if (this.app.state.isDeleteMode) {
+                            this.app.blocks.deleteBlock(this.app.state.cursorPosition);
+                        } else {
+                            this.app.blocks.placeBlock(this.app.state.currentMaterial, this.app.state.cursorPosition);
+                        }
+                        return;
+                }
+            }
+
+            onKeyUp(event) {
+                const key = event.key.toLowerCase();
+                const mappedKey = this.keyMap[key] || key;
+                const code = event.code;
+
+                const keyIdentifier = code || mappedKey;
+                this.pressedKeys.delete(keyIdentifier);
+
+                if (code === 'ControlLeft') {
+                    this.app.state.isDeleteMode = false;
+                    this.app.visualizer.updateHighlightedCell();
+                    this.updateCursorFromMouse();
+                }
+                if (mappedKey === 'l' || mappedKey === 'д') {
+                    this.app.state.isLightControlActive = false;
+                    this.app.lighting.lightHelper.visible = false;
+                }
+            }
+
+            onMouseDown(event) {
+                if (event.button === 2) {
+                    this.isRotating = true;
+                    this.previousMousePosition = { x: event.clientX, y: event.clientY };
+                    this.app.camera.inertia.isActive = false;
+                    this.app.camera.inertia.velocityH = 0;
+                    this.app.camera.inertia.velocityV = 0;
+                    event.preventDefault();
+                }
+            }
+
+            onMouseUp(event) {
+                if (event.button === 2) {
+                    this.isRotating = false;
+                    if (Math.abs(this.app.camera.inertia.velocityH) > 0.1 || Math.abs(this.app.camera.inertia.velocityV) > 0.1) {
+                        this.app.camera.inertia.isActive = true;
+                        this.app.camera.inertia.velocityH = this.app.camera.inertia.velocityH * 0.3;
+                        this.app.camera.inertia.velocityV = this.app.camera.inertia.velocityV * 0.3;
+                    }
+                }
+            }
+
+            onMouseMove(event) {
+                const canvasRect = this.app.renderer.domElement.getBoundingClientRect();
+                this.app.camera.mouse.x = ((event.clientX - canvasRect.left) / canvasRect.width) * 2 - 1;
+                this.app.camera.mouse.y = -((event.clientY - canvasRect.top) / canvasRect.height) * 2 + 1;
+
+                if (this.isRotating) {
+                    const deltaMove = {
+                        x: event.clientX - this.previousMousePosition.x,
+                        y: event.clientY - this.previousMousePosition.y
+                    };
+
+                    const rotSpeed = 0.005;
+
+                    if (this.app.state.isLightControlActive) {
+                        this.app.lighting.lightOrbit.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), -deltaMove.x * rotSpeed);
+                        this.app.lighting.lightOrbit.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), -deltaMove.y * rotSpeed);
+                        this.app.lighting.updateLightHelper();
+                    } else {
+                        this.app.camera.state.angleHorizontal -= deltaMove.x * rotSpeed;
+                        this.app.camera.state.angleVertical += deltaMove.y * rotSpeed;
+                        this.app.camera.inertia.velocityH = -deltaMove.x * rotSpeed;
+                        this.app.camera.inertia.velocityV = deltaMove.y * rotSpeed;
+                        this.app.camera.updateCameraPosition();
+                    }
+
+                    this.previousMousePosition = { x: event.clientX, y: event.clientY };
+                } else {
+                    if (!this.app.state.isGripMode) {
+                        this.updateCursorFromMouse();
+                    }
+                }
+            }
+
+            updateCursorFromMouse() {
+                this.app.camera.raycaster.setFromCamera(this.app.camera.mouse, this.app.camera.camera);
+                const blockIntersects = this.app.camera.raycaster.intersectObjects(this.app.blocks.blockObjects);
+
+                if (blockIntersects.length > 0) {
+                    const intersect = blockIntersects[0];
+                    const position = intersect.object.position.clone().sub(new THREE.Vector3(0.5, 0.5, 0.5)).floor();
+
+                    if (this.app.state.isDeleteMode) {
+                        this.app.state.cursorPosition.copy(position);
+                    } else {
+                        const faceNormal = intersect.face.normal;
+                        const newPosition = position.clone().add(faceNormal);
+
+                        if (this.app.blocks.isValidPosition(newPosition) && this.app.blocks.grid[newPosition.y][newPosition.x][newPosition.z] === null) {
+                            this.app.state.cursorPosition.copy(newPosition);
+                        }
+                    }
+                    this.app.visualizer.updateHighlightedCell();
+                }
+            }
+
+            onMouseWheel(event) {
+                event.preventDefault();
+
+                const zoomSpeed = 0.001 * this.app.camera.state.zoomAcceleration;
+                const zoomDelta = event.deltaY * zoomSpeed;
+
+                const currentFocusPoint = this.app.state.isFixedPivot ?
+                    new THREE.Vector3(CONSTANTS.GRID.LENGTH / 2, CONSTANTS.GRID.HEIGHT / 2, CONSTANTS.GRID.WIDTH / 2) :
+                    this.app.visualizer.highlightedCell.position.clone();
+                const zoomDirection = Math.sign(-event.deltaY);
+
+                if (zoomDirection !== this.app.camera.lastZoomDirection) {
+                    this.app.camera.lastFocusPoint.copy(currentFocusPoint);
+                    this.app.camera.lastZoomDirection = zoomDirection;
+                    this.app.camera.state.zoomAcceleration = 1;
+                } else {
+                    this.app.camera.state.zoomAcceleration = Math.min(this.app.camera.state.zoomAcceleration * 1.1, 10);
+                }
+
+                const dir = new THREE.Vector3().subVectors(this.app.camera.lastFocusPoint, this.app.camera.camera.position).normalize();
+                let currentDistance = this.app.camera.camera.position.distanceTo(this.app.camera.lastFocusPoint);
+
+                const minDistance = 4;
+                const maxDistance = Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT) * 1.5;
+
+                let newDistance = currentDistance - zoomDelta * currentDistance;
+                newDistance = Math.max(minDistance, Math.min(maxDistance, newDistance));
+
+                const newPosition = this.app.camera.lastFocusPoint.clone().sub(dir.multiplyScalar(newDistance));
+                this.app.camera.camera.position.lerp(newPosition, 0.3);
+                this.app.camera.camera.lookAt(this.app.camera.lastFocusPoint);
+                this.app.camera.camera.updateProjectionMatrix();
+                this.app.camera.updateCameraPosition();
+            }
+
+            onMouseClick(event) {
+                if (this.isRotating) return;
+                if (this.app.state.isOptimizeMode) return;
+
+                if (this.app.state.isDeleteMode) {
+                    this.app.blocks.deleteBlock(this.app.state.cursorPosition);
+                } else {
+                    this.app.blocks.placeBlock(this.app.state.currentMaterial, this.app.state.cursorPosition);
+                }
+            }
+
+            moveCursor(dx, dy, dz) {
+                const min = new THREE.Vector3(0, 0, 0);
+                const max = new THREE.Vector3(CONSTANTS.GRID.LENGTH - 1, CONSTANTS.GRID.HEIGHT - 1, CONSTANTS.GRID.WIDTH - 1);
+                this.app.state.cursorPosition.add(new THREE.Vector3(dx, dy, dz));
+                this.app.state.cursorPosition.copy(Utils.clampPosition(this.app.state.cursorPosition, min, max));
+                this.app.visualizer.updateHighlightedCell();
+            }
+
+            moveGrip(dx, dy, dz) {
+                const min = new THREE.Vector3(0, 0, 0);
+                const max = new THREE.Vector3(CONSTANTS.GRID.LENGTH - 1, CONSTANTS.GRID.HEIGHT - 1, CONSTANTS.GRID.WIDTH - 1);
+                this.app.state.gripPosition.add(new THREE.Vector3(dx, dy, dz));
+                this.app.state.gripPosition.copy(Utils.clampPosition(this.app.state.gripPosition, min, max));
+                this.app.ui.updateGripPositionDisplay();
+                this.app.visualizer.updateGripSphere();
+                this.app.visualizer.updateHandPosition();
+            }
+
+            moveSymmetryCenter(dx, dy, dz) {
+                const min = new THREE.Vector3(0, 0, 0);
+                const max = new THREE.Vector3(CONSTANTS.GRID.LENGTH - 1, CONSTANTS.GRID.HEIGHT - 1, CONSTANTS.GRID.WIDTH - 1);
+                this.app.state.symmetryCenter.add(new THREE.Vector3(dx, dy, dz));
+                this.app.state.symmetryCenter.copy(Utils.clampPosition(this.app.state.symmetryCenter, min, max));
+                this.app.visualizer.updateSymmetryPlanes();
+            }
+        }
+
+        class CameraManager {
+            constructor(app) {
+                this.app = app;
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+
+                this.state = {
+                    angleHorizontal: Math.PI / 4,
+                    angleVertical: Math.PI / 6,
+                    distance: CONSTANTS.GRID.LENGTH * 2,
+                    zoomAcceleration: 1
+                };
+
+                this.inertia = {
+                    velocityH: 0,
+                    velocityV: 0,
+                    damping: 0.999,
+                    isActive: false
+                };
+
+                this.lastFocusPoint = new THREE.Vector3();
+                this.lastZoomDirection = 0;
+
+                this.initializeCameraPosition();
+            }
+
+            initializeCameraPosition() {
+                const distance = Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT) * 0.7;
+                this.camera.position.set(distance, distance * 0.5, distance);
+                this.camera.lookAt(new THREE.Vector3(CONSTANTS.GRID.LENGTH / 2, CONSTANTS.GRID.HEIGHT / 2, CONSTANTS.GRID.WIDTH / 2));
+                this.lastFocusPoint.set(CONSTANTS.GRID.LENGTH / 2, CONSTANTS.GRID.HEIGHT / 2, CONSTANTS.GRID.WIDTH / 2);
+            }
+
+            resetCamera() {
+                this.inertia.isActive = false;
+                this.inertia.velocityH = 0;
+                this.inertia.velocityV = 0;
+
+                this.state.angleHorizontal = -Math.PI / 6;
+                this.state.angleVertical = Math.PI / 6;
+                this.state.zoomAcceleration = 1;
+
+                const center = new THREE.Vector3(CONSTANTS.GRID.LENGTH / 2, CONSTANTS.GRID.HEIGHT / 2, CONSTANTS.GRID.WIDTH / 2);
+                this.lastFocusPoint.copy(center);
+
+                const distance = Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT) * 0.7;
+                const rotationQuaternion = new THREE.Quaternion()
+                    .setFromEuler(new THREE.Euler(-this.state.angleVertical, this.state.angleHorizontal, 0, 'YXZ'));
+                const offset = new THREE.Vector3(0, 0, distance).applyQuaternion(rotationQuaternion);
+
+                this.camera.position.copy(center).add(offset);
+                this.camera.quaternion.copy(rotationQuaternion);
+                this.camera.up.set(0, 1, 0).applyQuaternion(rotationQuaternion);
+
+                Utils.showNotification("Camera reset", "success");
+            }
+
+            updateCameraPosition() {
+                const currentDistance = this.camera.position.distanceTo(this.lastFocusPoint);
+                const minDistance = 4;
+                const maxDistance = Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT) * 1.5;
+                const clampedDistance = Math.max(minDistance, Math.min(maxDistance, currentDistance));
+
+                this.state.angleHorizontal = (this.state.angleHorizontal + 2 * Math.PI) % (2 * Math.PI);
+
+                const rotationQuaternion = new THREE.Quaternion()
+                    .setFromEuler(new THREE.Euler(-this.state.angleVertical, this.state.angleHorizontal, 0, 'YXZ'));
+
+                const offset = new THREE.Vector3(0, 0, clampedDistance).applyQuaternion(rotationQuaternion);
+                this.camera.position.copy(this.lastFocusPoint).add(offset);
+
+                this.camera.quaternion.copy(rotationQuaternion);
+                this.camera.up.set(0, 1, 0).applyQuaternion(rotationQuaternion);
+            }
+
+            applyInertia() {
+                if (this.inertia.isActive && !this.app.input.isRotating) {
+                    this.state.angleHorizontal += this.inertia.velocityH;
+                    this.state.angleVertical += this.inertia.velocityV;
+
+                    this.inertia.velocityH *= this.inertia.damping;
+                    this.inertia.velocityV *= this.inertia.damping;
+
+                    if (Math.abs(this.inertia.velocityH) < 0.0001 && Math.abs(this.inertia.velocityV) < 0.0001) {
+                        this.inertia.isActive = false;
+                        this.inertia.velocityH = 0;
+                        this.inertia.velocityV = 0;
+                    }
+
+                    this.updateCameraPosition();
+                }
+            }
+        }
+
+        class LightingManager {
+            constructor(app) {
+                this.app = app;
+                this.ambientIntensity = 0.25;
+                this.directionalIntensity = 0.5;
+                this.magicEmissionIntensity = 0.3;
+                this.pointLightsIntensity = 0.3;
+                this.pointLights = [];
+                this.setupLighting();
+            }
+
+            setupLighting() {
+                const ambientLight = new THREE.AmbientLight(0x404040, this.ambientIntensity);
+                this.app.scene.add(ambientLight);
+
+                const centerX = CONSTANTS.GRID.LENGTH / 2;
+                const centerY = CONSTANTS.GRID.HEIGHT / 2;
+                const centerZ = CONSTANTS.GRID.WIDTH / 2;
+                const radius = Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH) * 0.7;
+
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const pointLight = new THREE.PointLight(0xffffff, this.pointLightsIntensity, radius * 2);
+                    pointLight.position.set(
+                        centerX + Math.cos(angle) * radius,
+                        centerY,
+                        centerZ + Math.sin(angle) * radius
+                    );
+                    this.pointLights.push(pointLight);
+                    this.app.scene.add(pointLight);
+                }
+
+                this.cubeRenderTarget = new THREE.WebGLCubeRenderTarget(512, {
+                    format: THREE.RGBFormat,
+                    generateMipmaps: true,
+                    minFilter: THREE.LinearMipmapLinearFilter
+                });
+                this.cubeCamera = new THREE.CubeCamera(0.1, 1000, this.cubeRenderTarget);
+                this.cubeCamera.position.set(
+                    CONSTANTS.GRID.LENGTH / 2,
+                    CONSTANTS.GRID.HEIGHT / 2,
+                    CONSTANTS.GRID.WIDTH / 2
+                );
+                this.app.scene.add(this.cubeCamera);
+
+                this.lightOrbit = new THREE.Object3D();
+                this.lightOrbit.position.set(CONSTANTS.GRID.LENGTH / 2, CONSTANTS.GRID.HEIGHT / 2, CONSTANTS.GRID.WIDTH / 2);
+                this.app.scene.add(this.lightOrbit);
+
+                this.directionalLight = new THREE.DirectionalLight(0xffffff, this.directionalIntensity);
+                this.directionalLight.position.set(
+                    Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT) / 3,
+                    Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT) / 3,
+                    Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT) / 3
+                );
+                this.directionalLight.target = this.lightOrbit;
+                this.lightOrbit.add(this.directionalLight);
+
+                this.lightHelper = new THREE.DirectionalLightHelper(this.directionalLight, 5);
+                this.lightHelper.visible = false;
+                this.app.scene.add(this.lightHelper);
+            }
+
+            updateLightHelper() {
+                if (this.lightHelper) {
+                    this.lightHelper.update();
+                }
+            }
+        }
+
+        class Visualizer {
+            constructor(app) {
+                this.app = app;
+                this.gridLines = null;
+                this.highlightedCell = null;
+                this.cutPlane = {
+                    plane: new THREE.Plane(new THREE.Vector3(1, 0, 0), 0),
+                    mesh: null,
+                    position: new THREE.Vector3(CONSTANTS.GRID.LENGTH / 2, CONSTANTS.GRID.HEIGHT / 2, CONSTANTS.GRID.WIDTH / 2)
+                };
+                this.symmetryPlanes = { x: null, y: null, z: null };
+                this.symmetryCenterSphere = null;
+                this.centerOfMassSphere = null;
+                this.centerOfPercussionSphere = null;
+                this.gripSphere = null;
+                this.handMesh = null;
+                this.createScene();
+            }
+
+            createScene() {
+                this.createGridLines();
+                this.createHighlightedCell();
+                this.createCutPlane();
+                this.createSymmetryPlanes();
+                this.createGripSphere();
+                this.createHand();
+            }
+
+            createGridLines() {
+                const material = new THREE.LineBasicMaterial({ color: 0xAAAAAA });
+                const points = [];
+                const { WIDTH, LENGTH, HEIGHT } = CONSTANTS.GRID;
+
+                points.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(LENGTH, 0, 0));
+                points.push(new THREE.Vector3(LENGTH, 0, 0), new THREE.Vector3(LENGTH, 0, WIDTH));
+                points.push(new THREE.Vector3(LENGTH, 0, WIDTH), new THREE.Vector3(0, 0, WIDTH));
+                points.push(new THREE.Vector3(0, 0, WIDTH), new THREE.Vector3(0, 0, 0));
+
+                points.push(new THREE.Vector3(0, HEIGHT, 0), new THREE.Vector3(LENGTH, HEIGHT, 0));
+                points.push(new THREE.Vector3(LENGTH, HEIGHT, 0), new THREE.Vector3(LENGTH, HEIGHT, WIDTH));
+                points.push(new THREE.Vector3(LENGTH, HEIGHT, WIDTH), new THREE.Vector3(0, HEIGHT, WIDTH));
+                points.push(new THREE.Vector3(0, HEIGHT, WIDTH), new THREE.Vector3(0, HEIGHT, 0));
+
+                points.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, HEIGHT, 0));
+                points.push(new THREE.Vector3(LENGTH, 0, 0), new THREE.Vector3(LENGTH, HEIGHT, 0));
+                points.push(new THREE.Vector3(LENGTH, 0, WIDTH), new THREE.Vector3(LENGTH, HEIGHT, WIDTH));
+                points.push(new THREE.Vector3(0, 0, WIDTH), new THREE.Vector3(0, HEIGHT, WIDTH));
+
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                this.gridLines = new THREE.LineSegments(geometry, material);
+                this.app.scene.add(this.gridLines);
+            }
+
+            createHighlightedCell() {
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const material = new THREE.MeshBasicMaterial({
+                    color: CONSTANTS.COLORS[this.app.state.currentMaterial],
+                    transparent: true,
+                    opacity: 0.5
+                });
+                this.highlightedCell = new THREE.Mesh(geometry, material);
+                this.app.scene.add(this.highlightedCell);
+                this.updateHighlightedCell();
+            }
+
+            createCutPlane() {
+                const planeGeometry = new THREE.PlaneGeometry(1, 1);
+                const planeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xE0E2DB,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.1,
+                    depthWrite: false
+                });
+                this.cutPlane.mesh = new THREE.Mesh(planeGeometry, planeMaterial);
+                this.cutPlane.mesh.position.copy(this.cutPlane.position);
+                this.cutPlane.mesh.visible = false;
+                this.app.scene.add(this.cutPlane.mesh);
+            }
+
+            createSymmetryPlanes() {
+                const planeGeometry = new THREE.PlaneGeometry(1, 1);
+                const planeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x0000ff,
+                    transparent: true,
+                    opacity: 0.1,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                });
+
+                const rotations = {
+                    x: [0, Math.PI / 2, 0],
+                    y: [Math.PI / 2, 0, 0],
+                    z: [0, 0, 0]
+                };
+
+                Object.keys(rotations).forEach(axis => {
+                    this.symmetryPlanes[axis] = new THREE.Mesh(planeGeometry, planeMaterial.clone());
+                    this.symmetryPlanes[axis].rotation.set(...rotations[axis]);
+                    this.app.scene.add(this.symmetryPlanes[axis]);
+                });
+
+                this.symmetryCenterSphere = Utils.createSphere(0.2, 0x00ffff, {
+                    transparent: true,
+                    opacity: 0.5,
+                    depthWrite: false,
+                    depthTest: false
+                });
+                this.app.scene.add(this.symmetryCenterSphere);
+
+                this.updateSymmetryPlanes();
+            }
+
+            createGripSphere() {
+                this.gripSphere = Utils.createSphere(0.3, 0xFF0000, {
+                    transparent: true,
+                    opacity: 0.7,
+                    depthTest: false
+                });
+                this.gripSphere.visible = false;
+                this.app.scene.add(this.gripSphere);
+                this.updateGripSphere();
+            }
+
+            createHand() {
+                const handGeometry = new THREE.BoxGeometry(15, 4, 4);
+                const handMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xA0522D,
+                    transparent: true,
+                    opacity: 0.5,
+                    depthWrite: false
+                });
+                this.handMesh = new THREE.Mesh(handGeometry, handMaterial);
+                this.handMesh.visible = false;
+                this.app.scene.add(this.handMesh);
+                this.updateHandPosition();
+            }
+
+            updateHighlightedCell() {
+                this.highlightedCell.position.copy(this.app.state.cursorPosition).addScalar(0.5);
+
+                const material = this.highlightedCell.material;
+
+                if (this.app.state.isDeleteMode) {
+                    const deleteColor = 0xFF0000;
+                    if (material.color.getHex() !== deleteColor) {
+                        material.color.setHex(deleteColor);
+                    }
+                    if (material.opacity !== 0.7) {
+                        material.opacity = 0.7;
+                    }
+                } else {
+                    const currentColor = CONSTANTS.COLORS[this.app.state.currentMaterial];
+                    if (material.color.getHex() !== currentColor) {
+                        material.color.setHex(currentColor);
+                    }
+                    if (material.opacity !== 0.5) {
+                        material.opacity = 0.5;
+                    }
+                }
+            }
+
+            updateGripSphere() {
+                this.gripSphere.position.copy(this.app.state.gripPosition).addScalar(0.5);
+            }
+
+            updateHandPosition() {
+                if (this.handMesh) {
+                    this.handMesh.position.copy(this.app.state.gripPosition).add(new THREE.Vector3(5.5, 0, 0));
+                }
+            }
+
+            updateSymmetryPlanes() {
+                const offset = 0.5;
+                const center = this.app.state.symmetryCenter.clone().addScalar(offset);
+                const scale = 16;
+
+                Object.keys(this.symmetryPlanes).forEach(axis => {
+                    const plane = this.symmetryPlanes[axis];
+                    plane.position.copy(center);
+                    plane.scale.set(scale, scale, scale);
+                    plane.visible = this.app.state.symmetryMode[axis];
+                });
+
+                this.symmetryCenterSphere.position.copy(center);
+                this.symmetryCenterSphere.visible = this.app.state.symmetryMode.x || this.app.state.symmetryMode.y || this.app.state.symmetryMode.z;
+            }
+
+            setCutPlaneNormal(x, y, z) {
+                this.cutPlane.plane.normal.set(x, y, z);
+                if (x) {
+                    this.cutPlane.mesh.rotation.set(0, Math.PI / 2, 0);
+                    this.cutPlane.mesh.scale.set(CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT, 1);
+                } else if (y) {
+                    this.cutPlane.mesh.rotation.set(Math.PI / 2, 0, 0);
+                    this.cutPlane.mesh.scale.set(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, 1);
+                } else {
+                    this.cutPlane.mesh.rotation.set(0, 0, 0);
+                    this.cutPlane.mesh.scale.set(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.HEIGHT, 1);
+                }
+                this.updateCutPlanePosition();
+            }
+
+            updateCutPlanePosition() {
+                const normal = this.cutPlane.plane.normal;
+                if (normal.x !== 0) {
+                    this.cutPlane.position.x = Math.max(0, Math.min(CONSTANTS.GRID.LENGTH - 1, this.cutPlane.position.x));
+                    this.cutPlane.mesh.position.set(this.cutPlane.position.x + 0.5, CONSTANTS.GRID.HEIGHT / 2, CONSTANTS.GRID.WIDTH / 2);
+                } else if (normal.y !== 0) {
+                    this.cutPlane.position.y = Math.max(0, Math.min(CONSTANTS.GRID.HEIGHT - 1, this.cutPlane.position.y));
+                    this.cutPlane.mesh.position.set(CONSTANTS.GRID.LENGTH / 2, this.cutPlane.position.y + 0.5, CONSTANTS.GRID.WIDTH / 2);
+                } else {
+                    this.cutPlane.position.z = Math.max(0, Math.min(CONSTANTS.GRID.WIDTH - 1, this.cutPlane.position.z));
+                    this.cutPlane.mesh.position.set(CONSTANTS.GRID.LENGTH / 2, CONSTANTS.GRID.HEIGHT / 2, this.cutPlane.position.z + 0.5);
+                }
+                this.cutPlane.plane.constant = -this.cutPlane.plane.normal.dot(this.cutPlane.position);
+            }
+
+            moveCutPlane(direction) {
+                const normal = this.cutPlane.plane.normal;
+                this.cutPlane.position.addScaledVector(normal, direction);
+                this.updateCutPlanePosition();
+            }
+
+            visualizePhysicsPoints(physics) {
+                if (this.centerOfMassSphere) {
+                    this.app.scene.remove(this.centerOfMassSphere);
+                }
+                if (this.centerOfPercussionSphere) {
+                    this.app.scene.remove(this.centerOfPercussionSphere);
+                }
+
+                this.centerOfMassSphere = Utils.createSphere(0.2, 0xFFFFFF);
+                this.centerOfMassSphere.position.copy(physics.centerOfMass);
+                this.app.scene.add(this.centerOfMassSphere);
+
+                this.centerOfPercussionSphere = Utils.createSphere(0.2, 0xFF0000);
+                this.centerOfPercussionSphere.position.copy(physics.centerOfPercussion);
+                this.app.scene.add(this.centerOfPercussionSphere);
+            }
+        }
+
+        class RenderManager {
+            constructor(app) {
+                this.app = app;
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x1a1a1a);
+
+                this.app.dom.get('renderer-container').appendChild(this.renderer.domElement);
+
+                this.frustum = new THREE.Frustum();
+                this.lastVisibilityUpdate = 0;
+                this.cameraViewProjectionMatrix = new THREE.Matrix4();
+                this.tempVec1 = new THREE.Vector3();
+
+                this.composer = null;
+
+                this.updateRendererSize();
+            }
+
+            updateRendererSize() {
+                const rect = this.app.dom.get('renderer-container').getBoundingClientRect();
+                this.app.camera.camera.aspect = rect.width / rect.height;
+                this.app.camera.camera.updateProjectionMatrix();
+                this.renderer.setSize(rect.width, rect.height);
+
+                if (this.composer) {
+                    this.composer.setSize(rect.width, rect.height);
+
+                    const fxaaPass = this.composer.passes.find(p => p.material && p.material.uniforms.resolution);
+                    if (fxaaPass) {
+                        fxaaPass.material.uniforms['resolution'].value.set(1 / rect.width, 1 / rect.height);
+                    }
+                }
+            }
+
+            updateBlockVisibility() {
+                this.app.camera.camera.updateMatrixWorld();
+                this.cameraViewProjectionMatrix.multiplyMatrices(
+                    this.app.camera.camera.projectionMatrix,
+                    this.app.camera.camera.matrixWorldInverse
+                );
+                this.frustum.setFromProjectionMatrix(this.cameraViewProjectionMatrix);
+
+                this.app.blocks.placedBlocks.forEach(block => {
+                    const blockPosition = this.tempVec1.set(
+                        block.position.x + 0.5,
+                        block.position.y + 0.5,
+                        block.position.z + 0.5
+                    );
+
+                    block.object.visible = this.frustum.containsPoint(blockPosition);
+
+                    if (block.object.visible) {
+                        const material = block.object.material;
+                        const distance = this.app.camera.camera.position.distanceTo(block.object.position);
+                        const maxDistance = Math.max(CONSTANTS.GRID.LENGTH, CONSTANTS.GRID.WIDTH, CONSTANTS.GRID.HEIGHT);
+                        const opacity = this.app.state.isTransparent ? 0.1 + (distance / maxDistance) * 0.4 : 1;
+
+                        material.transparent = this.app.state.isTransparent;
+                        material.opacity = opacity;
+                        material.wireframe = this.app.state.isTransparent;
+
+                        if (this.app.state.isCutaway) {
+                            const side = this.app.visualizer.cutPlane.plane.normal.dot(
+                                block.object.position.clone().sub(this.app.visualizer.cutPlane.position)
+                            );
+                            block.object.visible = side >= 0;
+                        }
+                    }
+                });
+            }
+
+            setupPostProcessing() {
+                const width = this.app.dom.get('renderer-container').clientWidth;
+                const height = this.app.dom.get('renderer-container').clientHeight;
+
+                this.composer = new THREE.EffectComposer(this.renderer);
+
+                const renderPass = new THREE.RenderPass(this.app.scene, this.app.camera.camera);
+                this.composer.addPass(renderPass);
+
+                const ssaoPass = new THREE.SSAOPass(this.app.scene, this.app.camera.camera, width, height);
+                ssaoPass.kernelRadius = 8;
+                ssaoPass.minDistance = 0.001;
+                ssaoPass.maxDistance = 0.1;
+                ssaoPass.output = THREE.SSAOPass.OUTPUT.Default;
+                this.composer.addPass(ssaoPass);
+
+                const bloomPass = new THREE.UnrealBloomPass(
+                    new THREE.Vector2(width, height),
+                    0.5,
+                    0.4,
+                    0.85
+                );
+                this.composer.addPass(bloomPass);
+
+                const fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+                fxaaPass.material.uniforms['resolution'].value.x = 1 / width;
+                fxaaPass.material.uniforms['resolution'].value.y = 1 / height;
+                fxaaPass.renderToScreen = true;
+                this.composer.addPass(fxaaPass);
+            }
+
+            render() {
+                if (this.app.state.isOptimizeMode && this.composer && this.app.state.usePostProcessing) {
+                    this.composer.render();
+                } else {
+                    this.renderer.render(this.app.scene, this.app.camera.camera);
+                }
+            }
+        }
+
+        class OptimizeManager {
+            constructor(app) {
+                this.app = app;
+                this.optimizedMeshes = [];
+                this.cubeCameras = [];
+                this.cubeRenderTargets = [];
+                this.savedStates = null;
+            }
+
+            toggleOptimizeMode() {
+                this.app.state.isOptimizeMode = !this.app.state.isOptimizeMode;
+                document.getElementById('optimize-mode').classList.toggle('active', this.app.state.isOptimizeMode);
+
+                if (this.app.state.isOptimizeMode) {
+                    this.enterOptimizeMode();
+                } else {
+                    this.exitOptimizeMode();
+                }
+            }
+
+            enterOptimizeMode() {
+                const weaponData = {
+                    version: "2.0",
+                    blocks: this.app.blocks.placedBlocks.map(block => ({
+                        x: block.position.x,
+                        y: block.position.y,
+                        z: block.position.z,
+                        material: block.type
+                    })),
+                    gripPosition: {
+                        x: this.app.state.gripPosition.x,
+                        y: this.app.state.gripPosition.y,
+                        z: this.app.state.gripPosition.z
+                    }
+                };
+                const compressed = Utils.compressWeaponData(weaponData);
+                if (compressed) {
+                    localStorage.setItem('weaponOptimizeCache', compressed);
+                }
+
+                this.savedStates = {
+                    isGridVisible: this.app.state.isGridVisible,
+                    isOutlineEnabled: this.app.state.isOutlineEnabled,
+                    isFixedPivot: this.app.state.isFixedPivot
+                };
+
+                if (this.app.state.isGridVisible) {
+                    this.app.state.isGridVisible = false;
+                    this.app.visualizer.gridLines.visible = false;
+                    document.getElementById('toggle-grid').classList.remove('active');
+                }
+
+                if (this.app.state.isOutlineEnabled) {
+                    this.app.state.isOutlineEnabled = false;
+                    document.getElementById('toggle-outline').classList.remove('active');
+                }
+
+                if (!this.app.state.isFixedPivot) {
+                    this.app.state.isFixedPivot = true;
+                    this.app.camera.lastFocusPoint.set(
+                        CONSTANTS.GRID.LENGTH / 2,
+                        CONSTANTS.GRID.HEIGHT / 2,
+                        CONSTANTS.GRID.WIDTH / 2
+                    );
+                    document.getElementById('toggle-fixed-pivot').classList.add('active');
+                }
+
+                if (this.app.state.isGripMode) this.app.ui.toggleMode('grip');
+                if (this.app.state.isCutaway) this.app.ui.toggleMode('cutaway');
+                if (this.app.state.isTransparent) this.app.ui.toggleMode('transparency');
+                if (this.app.state.isAnalyzeMode) this.app.ui.toggleMode('analyze');
+
+                ['grip-mode', 'toggle-cutaway', 'toggle-transparency', 'analyze-weapon', 'toggle-outline',
+                    'material-wood', 'material-metal', 'material-magic',
+                    'symmetry-x', 'symmetry-y', 'symmetry-z'].forEach(id => {
+                        document.getElementById(id).disabled = true;
+                    });
+
+                document.getElementById('toggle-postfx').disabled = false;
+
+                this.app.blocks.placedBlocks.forEach(block => {
+                    block.object.visible = false;
+                });
+
+                if (this.app.visualizer.highlightedCell) {
+                    this.app.visualizer.highlightedCell.visible = false;
+                }
+
+                this.createOptimizedMeshes();
+
+                if (this.app.state.usePostProcessing) {
+                    this.app.render.setupPostProcessing();
+                }
+
+                Utils.showNotification("Optimize mode enabled - editing disabled", "success");
+            }
+
+            exitOptimizeMode() {
+                this.optimizedMeshes.forEach(mesh => {
+                    this.app.scene.remove(mesh);
+                });
+                this.optimizedMeshes = [];
+
+                while (this.cubeCameras.length > 1) {
+                    const camera = this.cubeCameras.pop();
+                    this.app.scene.remove(camera);
+                }
+                while (this.cubeRenderTargets.length > 1) {
+                    this.cubeRenderTargets.pop().dispose();
+                }
+
+                if (this.app.render.composer) {
+                    this.app.render.composer = null;
+                }
+
+                const compressed = localStorage.getItem('weaponOptimizeCache');
+                if (compressed) {
+                    const weaponData = Utils.decompressWeaponData(compressed);
+                    if (weaponData) {
+                        this.app.blocks.clearAll();
+
+                        weaponData.blocks.forEach(blockData => {
+                            const position = new THREE.Vector3(blockData.x, blockData.y, blockData.z);
+                            this.app.blocks.placeBlock(blockData.material, position, false, true);
+                        });
+
+                        this.app.state.gripPosition.set(
+                            weaponData.gripPosition.x,
+                            weaponData.gripPosition.y,
+                            weaponData.gripPosition.z
+                        );
+
+                        this.app.visualizer.updateGripSphere();
+                        this.app.ui.updateGripPositionDisplay();
+                        this.app.visualizer.updateHandPosition();
+                    }
+                    localStorage.removeItem('weaponOptimizeCache');
+                } else {
+                    this.app.blocks.placedBlocks.forEach(block => {
+                        block.object.visible = true;
+                    });
+                }
+
+                ['grip-mode', 'toggle-cutaway', 'toggle-transparency', 'analyze-weapon', 'toggle-outline',
+                    'material-wood', 'material-metal', 'material-magic',
+                    'symmetry-x', 'symmetry-y', 'symmetry-z'].forEach(id => {
+                        document.getElementById(id).disabled = false;
+                    });
+
+                document.getElementById('toggle-postfx').disabled = true;
+
+                if (this.savedStates) {
+                    if (this.savedStates.isGridVisible !== this.app.state.isGridVisible) {
+                        this.app.state.isGridVisible = this.savedStates.isGridVisible;
+                        this.app.visualizer.gridLines.visible = this.savedStates.isGridVisible;
+                        document.getElementById('toggle-grid').classList.toggle('active', this.savedStates.isGridVisible);
+                    }
+
+                    if (this.savedStates.isOutlineEnabled !== this.app.state.isOutlineEnabled) {
+                        this.app.state.isOutlineEnabled = this.savedStates.isOutlineEnabled;
+                        document.getElementById('toggle-outline').classList.toggle('active', this.savedStates.isOutlineEnabled);
+                        this.app.blocks.placedBlocks.forEach(block => {
+                            const edges = block.object.children[0];
+                            if (edges) edges.visible = this.savedStates.isOutlineEnabled;
+                        });
+                    }
+
+                    if (this.savedStates.isFixedPivot !== this.app.state.isFixedPivot) {
+                        this.app.state.isFixedPivot = this.savedStates.isFixedPivot;
+                        document.getElementById('toggle-fixed-pivot').classList.toggle('active', this.savedStates.isFixedPivot);
+                    }
+
+                    this.savedStates = null;
+                }
+
+                if (this.app.visualizer.highlightedCell) {
+                    this.app.visualizer.highlightedCell.visible = true;
+                }
+
+                this.app.render.updateBlockVisibility();
+
+                Utils.showNotification("Optimize mode disabled - editing enabled", "success");
+            }
+
+            createOptimizedMeshes() {
+                const materialGroups = { wood: [], metal: [], magic: [] };
+
+                this.app.blocks.placedBlocks.forEach(block => {
+                    materialGroups[block.type].push(block.position);
+                });
+
+                ['wood', 'magic'].forEach(material => {
+                    if (materialGroups[material].length === 0) return;
+
+                    const visibleFaces = this.getVisibleFaces(materialGroups[material]);
+                    const geometry = this.createMeshFromFaces(visibleFaces);
+
+                    const meshMaterial = new THREE.MeshPhongMaterial({
+                        color: CONSTANTS.COLORS[material],
+                        emissive: material === 'magic' ? 0x00BFFF : 0x000000,
+                        emissiveIntensity: material === 'magic' ? this.app.lighting.magicEmissionIntensity : 0,
+                        flatShading: material === 'magic'
+                    });
+
+                    const mesh = new THREE.Mesh(geometry, meshMaterial);
+
+                    if (this.app.state.isOutlineEnabled) {
+                        const edges = new THREE.EdgesGeometry(geometry);
+                        const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const edgeLines = new THREE.LineSegments(edges, edgesMaterial);
+                        mesh.add(edgeLines);
+                    }
+
+                    if (mesh && mesh.material) {
+                        this.app.scene.add(mesh);
+                        this.optimizedMeshes.push(mesh);
+                    }
+                });
+
+                if (materialGroups.metal.length > 0) {
+                    this.createMetalMeshes(materialGroups.metal);
+                }
+            }
+
+            createMetalMeshes(metalPositions) {
+                const faces = this.getVisibleFacesWithArea(metalPositions);
+
+                if (faces.length === 0) return;
+
+                faces.sort((a, b) => b.area - a.area);
+
+                const faceCount = faces.length;
+                let topPercent, maxCameras;
+
+                if (faceCount < 50) {
+                    topPercent = 0.4;
+                    maxCameras = 5;
+                } else if (faceCount < 200) {
+                    topPercent = 0.25;
+                    maxCameras = 10;
+                } else {
+                    topPercent = 0.15;
+                    maxCameras = 20;
+                }
+
+                const topCount = Math.min(Math.ceil(faceCount * topPercent), maxCameras);
+                const bigFaces = faces.slice(0, topCount);
+
+                console.log(`Metal optimization: ${faceCount} faces, using ${topCount} CubeCameras for top ${(topPercent * 100)}%`);
+
+                bigFaces.forEach((face, index) => {
+                    const renderTarget = new THREE.WebGLCubeRenderTarget(512, {
+                        format: THREE.RGBFormat,
+                        generateMipmaps: true,
+                        minFilter: THREE.LinearMipmapLinearFilter
+                    });
+
+                    const cubeCamera = new THREE.CubeCamera(0.1, 1000, renderTarget);
+                    cubeCamera.position.copy(face.center);
+
+                    this.cubeRenderTargets.push(renderTarget);
+                    this.cubeCameras.push(cubeCamera);
+                    this.app.scene.add(cubeCamera);
+
+                    const faceGeometry = this.createMeshFromFaces([face]);
+                    const faceMaterial = new THREE.MeshStandardMaterial({
+                        color: CONSTANTS.COLORS.metal,
+                        metalness: 0.9,
+                        roughness: 0.15,
+                        envMap: renderTarget.texture,
+                        envMapIntensity: 1.0
+                    });
+
+                    const faceMesh = new THREE.Mesh(faceGeometry, faceMaterial);
+
+                    if (this.app.state.isOutlineEnabled) {
+                        const edges = new THREE.EdgesGeometry(faceGeometry);
+                        const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                        const edgeLines = new THREE.LineSegments(edges, edgesMaterial);
+                        faceMesh.add(edgeLines);
+                    }
+
+                    this.app.scene.add(faceMesh);
+                    this.optimizedMeshes.push(faceMesh);
+                });
+
+                const remainingFaces = faces.slice(topCount);
+
+                if (remainingFaces.length > 0) {
+                    const clusters = new Array(bigFaces.length).fill().map(() => []);
+
+                    remainingFaces.forEach(face => {
+                        let closestIndex = 0;
+                        let closestDistance = Infinity;
+
+                        bigFaces.forEach((bigFace, index) => {
+                            const distance = face.center.distanceTo(bigFace.center);
+                            if (distance < closestDistance) {
+                                closestDistance = distance;
+                                closestIndex = index;
+                            }
+                        });
+
+                        clusters[closestIndex].push(face);
+                    });
+
+                    clusters.forEach((clusterFaces, index) => {
+                        if (clusterFaces.length === 0) return;
+
+                        const clusterGeometry = this.createMeshFromFaces(clusterFaces);
+                        const clusterMaterial = new THREE.MeshStandardMaterial({
+                            color: CONSTANTS.COLORS.metal,
+                            metalness: 0.9,
+                            roughness: 0.1,
+                            envMap: this.cubeRenderTargets[index].texture,
+                            envMapIntensity: 1.2
+                        });
+
+                        const clusterMesh = new THREE.Mesh(clusterGeometry, clusterMaterial);
+
+                        if (this.app.state.isOutlineEnabled) {
+                            const edges = new THREE.EdgesGeometry(clusterGeometry);
+                            const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                            const edgeLines = new THREE.LineSegments(edges, edgesMaterial);
+                            clusterMesh.add(edgeLines);
+                        }
+
+                        this.app.scene.add(clusterMesh);
+                        this.optimizedMeshes.push(clusterMesh);
+                    });
+                }
+
+                this.updateAllCubeCameras();
+            }
+
+            getVisibleFaces(positions) {
+                const posSet = new Set(positions.map(p => `${p.x},${p.y},${p.z}`));
+                const faces = [];
+
+                positions.forEach(pos => {
+                    const directions = [
+                        { dir: [1, 0, 0], face: 'right' },
+                        { dir: [-1, 0, 0], face: 'left' },
+                        { dir: [0, 1, 0], face: 'top' },
+                        { dir: [0, -1, 0], face: 'bottom' },
+                        { dir: [0, 0, 1], face: 'front' },
+                        { dir: [0, 0, -1], face: 'back' }
+                    ];
+
+                    directions.forEach(({ dir, face }) => {
+                        const neighbor = `${pos.x + dir[0]},${pos.y + dir[1]},${pos.z + dir[2]}`;
+                        if (!posSet.has(neighbor)) {
+                            faces.push({ pos: pos, face: face });
+                        }
+                    });
+                });
+
+                return faces;
+            }
+
+            getVisibleFacesWithArea(positions) {
+                const posSet = new Set(positions.map(p => `${p.x},${p.y},${p.z}`));
+
+                const individualFaces = [];
+                positions.forEach(pos => {
+                    const checks = [
+                        { dir: [1, 0, 0], face: 'right', axis: 'x', u: 'z', v: 'y' },
+                        { dir: [-1, 0, 0], face: 'left', axis: 'x', u: 'z', v: 'y' },
+                        { dir: [0, 1, 0], face: 'top', axis: 'y', u: 'x', v: 'z' },
+                        { dir: [0, -1, 0], face: 'bottom', axis: 'y', u: 'x', v: 'z' },
+                        { dir: [0, 0, 1], face: 'front', axis: 'z', u: 'x', v: 'y' },
+                        { dir: [0, 0, -1], face: 'back', axis: 'z', u: 'x', v: 'y' }
+                    ];
+
+                    checks.forEach(({ dir, face, axis, u, v }) => {
+                        const neighbor = `${pos.x + dir[0]},${pos.y + dir[1]},${pos.z + dir[2]}`;
+                        if (!posSet.has(neighbor)) {
+                            individualFaces.push({
+                                pos: pos.clone(),
+                                face: face,
+                                axis: axis,
+                                u: u,
+                                v: v,
+                                dir: dir
+                            });
+                        }
+                    });
+                });
+
+                const mergedFaces = [];
+                const used = new Set();
+
+                individualFaces.forEach((startFace, startIndex) => {
+                    if (used.has(startIndex)) return;
+
+                    let width = 1;
+                    let height = 1;
+
+                    while (true) {
+                        let canExpand = true;
+                        for (let v = 0; v < height; v++) {
+                            const testPos = startFace.pos.clone();
+                            testPos[startFace.u] += width;
+                            testPos[startFace.v] += v;
+
+                            const faceIndex = individualFaces.findIndex((f, idx) =>
+                                !used.has(idx) &&
+                                f.face === startFace.face &&
+                                f.pos.x === testPos.x &&
+                                f.pos.y === testPos.y &&
+                                f.pos.z === testPos.z
+                            );
+
+                            if (faceIndex === -1) {
+                                canExpand = false;
+                                break;
+                            }
+                        }
+                        if (canExpand) {
+                            width++;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    while (true) {
+                        let canExpand = true;
+                        for (let u = 0; u < width; u++) {
+                            const testPos = startFace.pos.clone();
+                            testPos[startFace.u] += u;
+                            testPos[startFace.v] += height;
+
+                            const faceIndex = individualFaces.findIndex((f, idx) =>
+                                !used.has(idx) &&
+                                f.face === startFace.face &&
+                                f.pos.x === testPos.x &&
+                                f.pos.y === testPos.y &&
+                                f.pos.z === testPos.z
+                            );
+
+                            if (faceIndex === -1) {
+                                canExpand = false;
+                                break;
+                            }
+                        }
+                        if (canExpand) {
+                            height++;
+                        } else {
+                            break;
+                        }
+                    }
+
+                    for (let v = 0; v < height; v++) {
+                        for (let u = 0; u < width; u++) {
+                            const testPos = startFace.pos.clone();
+                            testPos[startFace.u] += u;
+                            testPos[startFace.v] += v;
+
+                            const faceIndex = individualFaces.findIndex((f, idx) =>
+                                !used.has(idx) &&
+                                f.face === startFace.face &&
+                                f.pos.x === testPos.x &&
+                                f.pos.y === testPos.y &&
+                                f.pos.z === testPos.z
+                            );
+
+                            if (faceIndex !== -1) {
+                                used.add(faceIndex);
+                            }
+                        }
+                    }
+
+                    const center = startFace.pos.clone();
+                    center[startFace.u] += width / 2;
+                    center[startFace.v] += height / 2;
+                    center[startFace.axis] += (startFace.dir[0] + startFace.dir[1] + startFace.dir[2]) * 0.5;
+
+                    mergedFaces.push({
+                        pos: startFace.pos,
+                        face: startFace.face,
+                        area: width * height,
+                        center: center,
+                        width: width,
+                        height: height,
+                        u: startFace.u,
+                        v: startFace.v
+                    });
+                });
+
+                console.log(`Greedy meshing: ${individualFaces.length} faces → ${mergedFaces.length} merged faces`);
+                return mergedFaces;
+            }
+
+            createMeshFromFaces(faces) {
+                const vertices = [];
+                const indices = [];
+                let vertexIndex = 0;
+
+                faces.forEach(({ pos, face, width = 1, height = 1 }) => {
+                    const x = pos.x, y = pos.y, z = pos.z;
+                    const w = width || 1;
+                    const h = height || 1;
+                    let faceVertices = [];
+
+                    switch (face) {
+                        case 'right':
+                            faceVertices = [
+                                [x + 1, y, z],
+                                [x + 1, y + h, z],
+                                [x + 1, y + h, z + w],
+                                [x + 1, y, z + w]
+                            ];
+                            break;
+                        case 'left':
+                            faceVertices = [
+                                [x, y, z + w],
+                                [x, y + h, z + w],
+                                [x, y + h, z],
+                                [x, y, z]
+                            ];
+                            break;
+                        case 'top':
+                            faceVertices = [
+                                [x, y + 1, z],
+                                [x, y + 1, z + h],
+                                [x + w, y + 1, z + h],
+                                [x + w, y + 1, z]
+                            ];
+                            break;
+                        case 'bottom':
+                            faceVertices = [
+                                [x, y, z + h],
+                                [x, y, z],
+                                [x + w, y, z],
+                                [x + w, y, z + h]
+                            ];
+                            break;
+                        case 'front':
+                            faceVertices = [
+                                [x, y, z + 1],
+                                [x + w, y, z + 1],
+                                [x + w, y + h, z + 1],
+                                [x, y + h, z + 1]
+                            ];
+                            break;
+                        case 'back':
+                            faceVertices = [
+                                [x + w, y, z],
+                                [x, y, z],
+                                [x, y + h, z],
+                                [x + w, y + h, z]
+                            ];
+                            break;
+                    }
+
+                    faceVertices.forEach(v => vertices.push(...v));
+
+                    indices.push(
+                        vertexIndex, vertexIndex + 1, vertexIndex + 2,
+                        vertexIndex, vertexIndex + 2, vertexIndex + 3
+                    );
+                    vertexIndex += 4;
+                });
+
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setIndex(indices);
+                geometry.computeVertexNormals();
+
+                return geometry;
+            }
+
+            updateAllCubeCameras() {
+                const originalBackground = this.app.scene.background;
+                this.app.scene.background = new THREE.Color(0x293133);
+
+                this.optimizedMeshes.forEach(mesh => {
+                    if (mesh && mesh.material && mesh.material.metalness > 0) {
+                        mesh.visible = false;
+                    }
+                });
+
+                this.cubeCameras.forEach(cubeCamera => {
+                    cubeCamera.update(this.app.render.renderer, this.app.scene);
+                });
+
+                this.app.scene.background = originalBackground;
+                this.optimizedMeshes.forEach(mesh => {
+                    if (mesh) {
+                        mesh.visible = true;
+                    }
+                });
+            }
+        }
+
+        class SaveLoadManager {
+            constructor(app) {
+                this.app = app;
+            }
+
+            exportWeapon(destination) {
+                const weaponData = {
+                    version: "2.0",
+                    blocks: this.app.blocks.placedBlocks.map(block => ({
+                        x: block.position.x,
+                        y: block.position.y,
+                        z: block.position.z,
+                        material: block.type
+                    })),
+                    gripPosition: {
+                        x: this.app.state.gripPosition.x,
+                        y: this.app.state.gripPosition.y,
+                        z: this.app.state.gripPosition.z
+                    },
+                    metadata: {
+                        blockCount: this.app.blocks.placedBlocks.length,
+                        created: new Date().toISOString()
+                    }
+                };
+
+                const compressed = Utils.compressWeaponData(weaponData);
+                if (!compressed) {
+                    Utils.showNotification("Export failed", "error");
+                    return;
+                }
+
+                if (destination === 'textarea') {
+                    this.app.dom.get('export-data').value = compressed;
+                    Utils.showNotification("Weapon exported successfully", "success");
+                } else if (destination === 'file') {
+                    const blob = new Blob([compressed], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `weapon_${Date.now()}.dat`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    Utils.showNotification("Weapon saved to file", "success");
+                }
+            }
+
+            importWeapon() {
+                const compressed = this.app.dom.get('export-data').value.trim();
+                if (!compressed) {
+                    Utils.showNotification("No data to import", "warning");
+                    return;
+                }
+
+                const weaponData = Utils.decompressWeaponData(compressed);
+                if (!weaponData || !weaponData.blocks) {
+                    Utils.showNotification("Invalid weapon data", "error");
+                    return;
+                }
+
+                this.clearWeapon();
+
+                weaponData.blocks.forEach(blockData => {
+                    const position = new THREE.Vector3(blockData.x, blockData.y, blockData.z);
+                    this.app.blocks.placeBlock(blockData.material, position, false, true);
+                });
+
+                this.app.state.gripPosition.set(
+                    weaponData.gripPosition.x,
+                    weaponData.gripPosition.y,
+                    weaponData.gripPosition.z
+                );
+
+                this.app.visualizer.updateGripSphere();
+                this.app.ui.updateGripPositionDisplay();
+                this.app.visualizer.updateHandPosition();
+                this.app.ui.updateStatistics();
+
+                if (weaponData.metadata && weaponData.metadata.legacy) {
+                    Utils.showNotification(`Legacy weapon imported (v${weaponData.version}) - grip set to center`, "warning");
+                } else {
+                    Utils.showNotification(`Weapon imported successfully (v${weaponData.version})`, "success");
+                }
+            }
+
+            autoSaveWeapon() {
+                if (this.app.blocks.placedBlocks.length === 0) {
+                    localStorage.removeItem('weaponAutoSave');
+                    return;
+                }
+
+                const weaponData = {
+                    version: "2.0",
+                    blocks: this.app.blocks.placedBlocks.map(block => ({
+                        x: block.position.x,
+                        y: block.position.y,
+                        z: block.position.z,
+                        material: block.type
+                    })),
+                    gripPosition: {
+                        x: this.app.state.gripPosition.x,
+                        y: this.app.state.gripPosition.y,
+                        z: this.app.state.gripPosition.z
+                    }
+                };
+
+                const compressed = Utils.compressWeaponData(weaponData);
+                if (compressed) {
+                    localStorage.setItem('weaponAutoSave', compressed);
+                }
+            }
+
+            autoLoadWeapon() {
+                const compressed = localStorage.getItem('weaponAutoSave');
+                if (!compressed) return;
+
+                const weaponData = Utils.decompressWeaponData(compressed);
+                if (!weaponData || !weaponData.blocks) return;
+
+                weaponData.blocks.forEach(blockData => {
+                    const position = new THREE.Vector3(blockData.x, blockData.y, blockData.z);
+                    this.app.blocks.placeBlock(blockData.material, position, false, true);
+                });
+
+                this.app.state.gripPosition.set(
+                    weaponData.gripPosition.x,
+                    weaponData.gripPosition.y,
+                    weaponData.gripPosition.z
+                );
+
+                this.app.visualizer.updateGripSphere();
+                this.app.ui.updateGripPositionDisplay();
+                this.app.visualizer.updateHandPosition();
+                this.app.ui.updateStatistics();
+
+                console.log('Weapon auto-loaded from cache');
+            }
+
+            clearWeapon() {
+                this.app.blocks.clearAll();
+
+                if (this.app.visualizer.centerOfMassSphere) {
+                    this.app.scene.remove(this.app.visualizer.centerOfMassSphere);
+                    this.app.visualizer.centerOfMassSphere = null;
+                }
+                if (this.app.visualizer.centerOfPercussionSphere) {
+                    this.app.scene.remove(this.app.visualizer.centerOfPercussionSphere);
+                    this.app.visualizer.centerOfPercussionSphere = null;
+                }
+
+                this.app.state.gripPosition.set(
+                    Math.floor(CONSTANTS.GRID.LENGTH / 2),
+                    Math.floor(CONSTANTS.GRID.HEIGHT / 2),
+                    Math.floor(CONSTANTS.GRID.WIDTH / 2)
+                );
+                this.app.visualizer.updateGripSphere();
+                this.app.ui.updateGripPositionDisplay();
+                this.app.visualizer.updateHandPosition();
+
+                this.app.dom.get('export-data').value = '';
+
+                if (this.app.state.isAnalyzeMode) {
+                    this.app.state.isAnalyzeMode = false;
+                    document.getElementById('analyze-weapon').classList.remove('active');
+                }
+
+                this.app.ui.updateStatistics();
+                Utils.showNotification("Weapon cleared", "success");
+            }
+        }
+
+        class UIManager {
+            constructor(app) {
+                this.app = app;
+                this.setupUI();
+            }
+
+            setupUI() {
+                this.app.dom.get('help-toggle').addEventListener('click', () => {
+                    this.app.dom.get('help-panel').classList.toggle('show');
+                    this.app.dom.get('help-toggle').textContent =
+                        this.app.dom.get('help-panel').classList.contains('show') ?
+                            '❌ Hide Controls Help' : 'ℹ️ Show Controls Help';
+                });
+
+                document.querySelectorAll('[data-material]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.app.state.currentMaterial = e.target.dataset.material;
+                        this.app.visualizer.updateHighlightedCell();
+                        this.updateMaterialIndicator();
+                        document.querySelectorAll('[data-material]').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                    });
+                });
+
+                document.getElementById('grip-mode').addEventListener('click', () => this.toggleMode('grip'));
+                document.getElementById('reset-camera').addEventListener('click', () => this.app.camera.resetCamera());
+
+                document.querySelectorAll('[data-axis]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.toggleSymmetry(e.target.dataset.axis);
+                    });
+                });
+
+                const toggleHandlers = {
+                    'toggle-outline': () => this.toggleMode('outline'),
+                    'toggle-transparency': () => this.toggleMode('transparency'),
+                    'toggle-cutaway': () => this.toggleMode('cutaway'),
+                    'analyze-weapon': () => this.toggleMode('analyze'),
+                    'optimize-mode': () => this.app.optimize.toggleOptimizeMode(),
+                    'toggle-grid': () => this.toggleGrid(),
+                    'toggle-fixed-pivot': () => this.toggleFixedPivot(),
+                    'toggle-postfx': () => this.togglePostProcessing()
+                };
+
+                Object.entries(toggleHandlers).forEach(([id, handler]) => {
+                    document.getElementById(id).addEventListener('click', handler);
+                });
+
+                this.setupLightingSliders();
+
+                document.getElementById('toggle-postfx').disabled = true;
+
+                document.getElementById('calculate-physics').addEventListener('click', () => this.calculatePhysics());
+                document.getElementById('export-weapon').addEventListener('click', () => this.app.saveLoad.exportWeapon('textarea'));
+                document.getElementById('import-weapon').addEventListener('click', () => this.app.saveLoad.importWeapon());
+                document.getElementById('clear-weapon').addEventListener('click', () => this.app.saveLoad.clearWeapon());
+                document.getElementById('save-weapon').addEventListener('click', () => this.app.gallery.saveCurrentModel());
+
+                this.app.dom.get('toggle-panel').addEventListener('click', () => this.togglePanel());
+            }
+
+            setupLightingSliders() {
+                this.app.dom.get('ambient-slider').addEventListener('input', (e) => {
+                    this.app.lighting.ambientIntensity = e.target.value / 100;
+                    this.app.dom.get('ambient-value').textContent = this.app.lighting.ambientIntensity.toFixed(2);
+                    this.app.scene.children.find(obj => obj.isAmbientLight).intensity = this.app.lighting.ambientIntensity;
+                });
+
+                this.app.dom.get('directional-slider').addEventListener('input', (e) => {
+                    this.app.lighting.directionalIntensity = e.target.value / 100;
+                    this.app.dom.get('directional-value').textContent = this.app.lighting.directionalIntensity.toFixed(2);
+                    this.app.lighting.directionalLight.intensity = this.app.lighting.directionalIntensity;
+                });
+
+                this.app.dom.get('magic-slider').addEventListener('input', (e) => {
+                    this.app.lighting.magicEmissionIntensity = e.target.value / 100;
+                    this.app.dom.get('magic-value').textContent = this.app.lighting.magicEmissionIntensity.toFixed(2);
+
+                    this.app.blocks.placedBlocks.forEach(block => {
+                        if (block.type === 'magic') {
+                            block.object.material.emissive.setHex(0x00BFFF);
+                            block.object.material.emissiveIntensity = this.app.lighting.magicEmissionIntensity;
+                        }
+                    });
+
+                    if (this.app.state.isOptimizeMode) {
+                        this.app.optimize.optimizedMeshes.forEach(mesh => {
+                            if (mesh.material.emissive && mesh.material.emissive.getHex() === 0x00BFFF) {
+                                mesh.material.emissiveIntensity = this.app.lighting.magicEmissionIntensity;
+                            }
+                        });
+                    }
+                });
+
+                this.app.dom.get('magic-slider').addEventListener('change', (e) => {
+                    if (this.app.state.isOptimizeMode) {
+                        this.app.optimize.updateAllCubeCameras();
+                    }
+                });
+
+                this.app.dom.get('point-slider').addEventListener('input', (e) => {
+                    this.app.lighting.pointLightsIntensity = e.target.value / 100;
+                    this.app.dom.get('point-value').textContent = this.app.lighting.pointLightsIntensity.toFixed(2);
+                    this.app.lighting.pointLights.forEach(light => light.intensity = this.app.lighting.pointLightsIntensity);
+                });
+            }
+
+            toggleMode(mode) {
+                const modes = {
+                    grip: {
+                        prop: 'isGripMode',
+                        btn: 'grip-mode',
+                        onActivate: () => {
+                            this.app.visualizer.gripSphere.visible = true;
+                            this.app.visualizer.handMesh.visible = true;
+                        },
+                        onDeactivate: () => {
+                            this.app.visualizer.gripSphere.visible = false;
+                            this.app.visualizer.handMesh.visible = false;
+                        }
+                    },
+                    outline: {
+                        prop: 'isOutlineEnabled',
+                        btn: 'toggle-outline',
+                        onToggle: () => {
+                            this.app.blocks.placedBlocks.forEach(block => {
+                                const edges = block.object.children[0];
+                                if (edges) edges.visible = this.app.state.isOutlineEnabled;
+                            });
+                        }
+                    },
+                    transparency: {
+                        prop: 'isTransparent',
+                        btn: 'toggle-transparency',
+                        onToggle: () => this.app.render.updateBlockVisibility()
+                    },
+                    cutaway: {
+                        prop: 'isCutaway',
+                        btn: 'toggle-cutaway',
+                        onActivate: () => {
+                            this.app.visualizer.setCutPlaneNormal(1, 0, 0);
+                            this.app.visualizer.cutPlane.position.set(CONSTANTS.GRID.LENGTH / 2, CONSTANTS.GRID.HEIGHT / 2, CONSTANTS.GRID.WIDTH / 2);
+                            this.app.visualizer.updateCutPlanePosition();
+                            this.app.visualizer.cutPlane.mesh.visible = true;
+                        },
+                        onDeactivate: () => {
+                            this.app.visualizer.cutPlane.mesh.visible = false;
+                        },
+                        onToggle: () => this.app.render.updateBlockVisibility()
+                    },
+                    analyze: {
+                        prop: 'isAnalyzeMode',
+                        btn: 'analyze-weapon',
+                        onActivate: () => this.app.physics.analyzeWeapon(),
+                        onDeactivate: () => this.app.blocks.resetBlockColors()
+                    }
+                };
+
+                const config = modes[mode];
+                if (!config) return;
+
+                this.app.state[config.prop] = !this.app.state[config.prop];
+                document.getElementById(config.btn).classList.toggle('active', this.app.state[config.prop]);
+
+                if (this.app.state[config.prop] && config.onActivate) {
+                    config.onActivate();
+                } else if (!this.app.state[config.prop] && config.onDeactivate) {
+                    config.onDeactivate();
+                }
+
+                if (config.onToggle) {
+                    config.onToggle();
+                }
+            }
+
+            toggleSymmetry(axis) {
+                this.app.state.symmetryMode[axis] = !this.app.state.symmetryMode[axis];
+                const btn = document.querySelector(`[data-axis="${axis}"]`);
+                btn.classList.toggle('active', this.app.state.symmetryMode[axis]);
+                this.app.visualizer.updateSymmetryPlanes();
+            }
+
+            toggleGrid() {
+                this.app.state.isGridVisible = !this.app.state.isGridVisible;
+                document.getElementById('toggle-grid').classList.toggle('active', this.app.state.isGridVisible);
+                if (this.app.visualizer.gridLines) {
+                    this.app.visualizer.gridLines.visible = this.app.state.isGridVisible;
+                }
+            }
+
+            toggleFixedPivot() {
+                this.app.state.isFixedPivot = !this.app.state.isFixedPivot;
+                document.getElementById('toggle-fixed-pivot').classList.toggle('active', this.app.state.isFixedPivot);
+                if (this.app.state.isFixedPivot) {
+                    this.app.camera.lastFocusPoint.set(
+                        CONSTANTS.GRID.LENGTH / 2,
+                        CONSTANTS.GRID.HEIGHT / 2,
+                        CONSTANTS.GRID.WIDTH / 2
+                    );
+                }
+                Utils.showNotification(this.app.state.isFixedPivot ? "Pivot fixed to center" : "Pivot follows cursor", "success");
+            }
+
+            togglePostProcessing() {
+                this.app.state.usePostProcessing = !this.app.state.usePostProcessing;
+                document.getElementById('toggle-postfx').classList.toggle('active', this.app.state.usePostProcessing);
+            }
+
+            togglePanel() {
+                const panel = this.app.dom.get('controls-panel');
+                const toggle = this.app.dom.get('toggle-panel');
+                const container = this.app.dom.get('renderer-container');
+
+                panel.classList.toggle('collapsed');
+                toggle.classList.toggle('collapsed');
+                container.classList.toggle('expanded');
+
+                toggle.innerHTML = panel.classList.contains('collapsed') ? '◀' : '▶';
+
+                setTimeout(() => this.app.render.updateRendererSize(), 300);
+            }
+
+            updateStatistics() {
+                const counts = { total: 0, wood: 0, metal: 0, magic: 0 };
+
+                this.app.blocks.placedBlocks.forEach(block => {
+                    counts.total++;
+                    counts[block.type]++;
+                });
+
+                this.app.dom.get('block-count').textContent = counts.total;
+                this.app.dom.get('wood-count').textContent = counts.wood;
+                this.app.dom.get('metal-count').textContent = counts.metal;
+                this.app.dom.get('magic-count').textContent = counts.magic;
+            }
+
+            updateGripPositionDisplay() {
+                this.app.dom.get('grip-position').textContent =
+                    `(${this.app.state.gripPosition.x}, ${this.app.state.gripPosition.y}, ${this.app.state.gripPosition.z})`;
+            }
+
+            updateMaterialIndicator() {
+                const materialMap = {
+                    'wood': 'Wood (1)',
+                    'metal': 'Metal (2)',
+                    'magic': 'Magic (3)'
+                };
+                this.app.dom.get('current-material').textContent = materialMap[this.app.state.currentMaterial];
+                this.app.dom.get('current-material').className = `material-${this.app.state.currentMaterial}`;
+            }
+
+            calculatePhysics() {
+                const physics = this.app.physics.calculate();
+                if (!physics) return;
+
+                this.displayPhysicsResults(physics);
+                this.app.visualizer.visualizePhysicsPoints(physics);
+                Utils.showNotification("Physics calculated successfully", "success");
+            }
+
+            displayPhysicsResults(physics) {
+                this.app.dom.get('total-mass').textContent = `${physics.totalMass.toFixed(2)} g`;
+                this.app.dom.get('center-of-mass').textContent =
+                    `(${physics.centerOfMass.x.toFixed(2)}, ${physics.centerOfMass.y.toFixed(2)}, ${physics.centerOfMass.z.toFixed(2)})`;
+                this.app.dom.get('center-of-percussion').textContent =
+                    `(${physics.centerOfPercussion.x.toFixed(2)}, ${physics.centerOfPercussion.y.toFixed(2)}, ${physics.centerOfPercussion.z.toFixed(2)})`;
+                this.app.dom.get('inertia-x').textContent = physics.inertiaX.toFixed(6);
+                this.app.dom.get('inertia-y').textContent = physics.inertiaY.toFixed(6);
+                this.app.dom.get('inertia-z').textContent = physics.inertiaZ.toFixed(6);
+                this.app.dom.get('strike-velocity').textContent = physics.strikeVelocity.toFixed(2);
+                this.app.dom.get('thrust-velocity').textContent = physics.thrustVelocity.toFixed(2);
+                this.app.dom.get('effective-mass').textContent = physics.effectiveMass.toFixed(2);
+            }
+        }
+
+        class AppState {
+            constructor() {
+                this.cursorPosition = new THREE.Vector3(
+                    Math.floor(CONSTANTS.GRID.LENGTH / 2),
+                    Math.floor(CONSTANTS.GRID.HEIGHT / 2),
+                    Math.floor(CONSTANTS.GRID.WIDTH / 2)
+                );
+                this.currentMaterial = 'wood';
+                this.isGripMode = false;
+                this.isDeleteMode = false;
+                this.isLightControlActive = false;
+                this.isOutlineEnabled = true;
+                this.isTransparent = false;
+                this.isCutaway = false;
+                this.isAnalyzeMode = false;
+                this.isGridVisible = true;
+                this.isFixedPivot = false;
+                this.isOptimizeMode = false;
+                this.usePostProcessing = true;
+
+                this.gripPosition = new THREE.Vector3(
+                    Math.floor(CONSTANTS.GRID.LENGTH / 2),
+                    Math.floor(CONSTANTS.GRID.HEIGHT / 2),
+                    Math.floor(CONSTANTS.GRID.WIDTH / 2)
+                );
+                this.symmetryMode = { x: false, y: false, z: false };
+                this.symmetryCenter = new THREE.Vector3(
+                    Math.floor(CONSTANTS.GRID.LENGTH / 2),
+                    Math.floor(CONSTANTS.GRID.HEIGHT / 2),
+                    Math.floor(CONSTANTS.GRID.WIDTH / 2)
+                );
+            }
+        }
+
+        class SupabaseManager {
+            constructor(app) {
+                this.app = app;
+                this.supabase = null;
+                this.user = null;
+                this.isInitialized = false;
+
+                // ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ
+                const SUPABASE_URL = 'https://jcidzjkbgvjisvcrdfmv.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaWR6amtiZ3ZqaXN2Y3JkZm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0ODAwNzAsImV4cCI6MjA3NzA1NjA3MH0.hUkYKMuSmgHJZm2dIpGVwSaiVYYpSZ-mEApWsVsk1Kk';
+
+                this.initSupabase(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+
+            async initSupabase(url, key) {
+                try {
+                    this.supabase = supabase.createClient(url, key);
+
+                    // Проверяем текущую сессию
+                    const { data: { session } } = await this.supabase.auth.getSession();
+                    if (session) {
+                        this.user = session.user;
+                        this.onAuthStateChange(true);
+                    }
+
+                    // Слушаем изменения авторизации
+                    this.supabase.auth.onAuthStateChange((event, session) => {
+                        this.user = session?.user || null;
+                        this.onAuthStateChange(!!session);
+                    });
+
+                    this.isInitialized = true;
+                } catch (error) {
+                    console.error('Supabase initialization error:', error);
+                }
+            }
+
+            onAuthStateChange(isAuthenticated) {
+                const loginBtn = document.getElementById('login-btn');
+                const logoutBtn = document.getElementById('logout-btn');
+                const userInfo = document.getElementById('user-info');
+                const syncBtn = document.getElementById('sync-btn');
+
+                if (isAuthenticated && this.user) {
+                    loginBtn.style.display = 'none';
+                    logoutBtn.style.display = 'block';
+                    syncBtn.style.display = 'block';
+                    userInfo.textContent = this.user.email || 'User';
+                    userInfo.style.display = 'block';
+
+                    // Загружаем модели с сервера
+                    this.app.gallery.loadFromServer();
+                } else {
+                    loginBtn.style.display = 'block';
+                    logoutBtn.style.display = 'none';
+                    syncBtn.style.display = 'none';
+                    userInfo.style.display = 'none';
+                    userInfo.textContent = '';
+                }
+            }
+
+            async signInWithGoogle() {
+                try {
+                    const { data, error } = await this.supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo: window.location.origin
+                        }
+                    });
+
+                    if (error) throw error;
+                } catch (error) {
+                    console.error('Login error:', error);
+                    Utils.showNotification('Login failed', 'error');
+                }
+            }
+
+            async signOut() {
+                try {
+                    const { error } = await this.supabase.auth.signOut();
+                    if (error) throw error;
+
+                    Utils.showNotification('Logged out successfully', 'success');
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    Utils.showNotification('Logout failed', 'error');
+                }
+            }
+
+            async saveModelToServer(model) {
+                if (!this.user) {
+                    Utils.showNotification('Please login to save to cloud', 'warning');
+                    return false;
+                }
+
+                try {
+                    const { data, error } = await this.supabase
+                        .from('weapon_models')
+                        .insert([{
+                            user_id: this.user.id,
+                            name: `Weapon ${new Date().toLocaleString()}`,
+                            data: model.data,
+                            thumbnail: model.thumbnail
+                        }])
+                        .select();
+
+                    if (error) throw error;
+
+                    Utils.showNotification('Model saved to cloud', 'success');
+                    return data[0];
+                } catch (error) {
+                    console.error('Save to server error:', error);
+                    Utils.showNotification('Failed to save to cloud', 'error');
+                    return false;
+                }
+            }
+
+            async loadModelsFromServer() {
+                if (!this.user) return [];
+
+                try {
+                    const { data, error } = await this.supabase
+                        .from('weapon_models')
+                        .select('*')
+                        .eq('user_id', this.user.id)
+                        .order('created_at', { ascending: false });
+
+                    if (error) throw error;
+
+                    return data.map(item => ({
+                        id: item.id,
+                        data: item.data,
+                        thumbnail: item.thumbnail,
+                        created: item.created_at,
+                        isCloud: true
+                    }));
+                } catch (error) {
+                    console.error('Load from server error:', error);
+                    Utils.showNotification('Failed to load from cloud', 'error');
+                    return [];
+                }
+            }
+
+            async deleteModelFromServer(id) {
+                if (!this.user) return false;
+
+                try {
+                    const { error } = await this.supabase
+                        .from('weapon_models')
+                        .delete()
+                        .eq('id', id)
+                        .eq('user_id', this.user.id);
+
+                    if (error) throw error;
+
+                    Utils.showNotification('Model deleted from cloud', 'success');
+                    return true;
+                } catch (error) {
+                    console.error('Delete from server error:', error);
+                    Utils.showNotification('Failed to delete from cloud', 'error');
+                    return false;
+                }
+            }
+
+            async syncModels() {
+                if (!this.user) {
+                    Utils.showNotification('Please login to sync', 'warning');
+                    return;
+                }
+
+                Utils.showNotification('Syncing...', 'success');
+                await this.app.gallery.syncWithServer();
+            }
+        }
+
+        class GalleryManager {
+            constructor(app) {
+                this.app = app;
+                this.storageKey = 'weaponGallery';
+                this.models = this.loadFromStorage();
+                this.setupUI();
+                this.renderGallery();
+            }
+
+            setupUI() {
+                document.getElementById('toggle-gallery').addEventListener('click', () => this.togglePanel());
+                document.getElementById('gallery-toggle-btn').addEventListener('click', () => this.togglePanel());
+                document.getElementById('login-btn').addEventListener('click', () => this.app.supabase.signInWithGoogle());
+                document.getElementById('logout-btn').addEventListener('click', () => this.app.supabase.signOut());
+                document.getElementById('sync-btn').addEventListener('click', () => this.app.supabase.syncModels());
+            }
+
+            togglePanel() {
+                const panel = document.getElementById('gallery-panel');
+                const toggle = document.getElementById('gallery-toggle-btn');
+                const container = this.app.dom.get('renderer-container');
+
+                panel.classList.toggle('collapsed');
+                toggle.classList.toggle('collapsed');
+                container.classList.toggle('gallery-expanded');
+
+                toggle.innerHTML = panel.classList.contains('collapsed') ? '▶' : '◀';
+
+                setTimeout(() => this.app.render.updateRendererSize(), 300);
+            }
+
+            loadFromStorage() {
+                const data = localStorage.getItem(this.storageKey);
+                return data ? JSON.parse(data) : [];
+            }
+
+            async loadFromServer() {
+                const serverModels = await this.app.supabase.loadModelsFromServer();
+
+                // Объединяем локальные и серверные модели
+                const localIds = new Set(this.models.map(m => m.id));
+                serverModels.forEach(model => {
+                    if (!localIds.has(model.id)) {
+                        this.models.push(model);
+                    }
+                });
+
+                this.renderGallery();
+            }
+
+            saveToStorage() {
+                localStorage.setItem(this.storageKey, JSON.stringify(this.models));
+            }
+
+            async saveModel(weaponData) {
+                const thumbnail = await this.renderThumbnail();
+
+                const model = {
+                    id: Date.now(),
+                    data: weaponData,
+                    thumbnail: thumbnail,
+                    created: new Date().toISOString()
+                };
+
+                this.models.unshift(model);
+                this.saveToStorage();
+                this.renderGallery();
+
+                Utils.showNotification("Model saved to gallery", "success");
+            }
+
+            async syncWithServer() {
+                // Загружаем с сервера
+                await this.loadFromServer();
+
+                // Загружаем локальные модели на сервер
+                const localModels = this.models.filter(m => !m.isCloud);
+                for (const model of localModels) {
+                    await this.app.supabase.saveModelToServer(model);
+                }
+
+                // Перезагружаем все с сервера
+                this.models = await this.app.supabase.loadModelsFromServer();
+                this.saveToStorage();
+                this.renderGallery();
+
+                Utils.showNotification('Sync complete', 'success');
+            }
+
+            async renderThumbnail() {
+                const originalSize = {
+                    width: this.app.renderer.domElement.width,
+                    height: this.app.renderer.domElement.height
+                };
+
+                this.app.renderer.setSize(256, 256, false);
+                this.app.camera.camera.aspect = 1;
+                this.app.camera.camera.updateProjectionMatrix();
+
+                this.app.render.render();
+
+                const thumbnail = this.app.renderer.domElement.toDataURL('image/jpeg', 0.8);
+
+                this.app.renderer.setSize(originalSize.width, originalSize.height, false);
+                this.app.camera.camera.aspect = originalSize.width / originalSize.height;
+                this.app.camera.camera.updateProjectionMatrix();
+
+                return thumbnail;
+            }
+
+            renderGallery() {
+                const container = document.getElementById('gallery-content');
+                container.innerHTML = '';
+
+                this.models.forEach(model => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+                    if (model.isCloud) {
+                        item.classList.add('cloud');
+                    }
+
+                    const img = document.createElement('img');
+                    img.src = model.thumbnail;
+                    img.alt = 'Weapon model';
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'gallery-item-delete';
+                    deleteBtn.innerHTML = '×';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        this.deleteModel(model.id);
+                    };
+
+                    item.onclick = () => this.loadModel(model);
+
+                    item.appendChild(img);
+                    item.appendChild(deleteBtn);
+                    container.appendChild(item);
+                });
+            }
+
+            loadModel(model) {
+                this.app.saveLoad.clearWeapon();
+
+                model.data.blocks.forEach(blockData => {
+                    const position = new THREE.Vector3(blockData.x, blockData.y, blockData.z);
+                    this.app.blocks.placeBlock(blockData.material, position, false, true);
+                });
+
+                this.app.state.gripPosition.set(
+                    model.data.gripPosition.x,
+                    model.data.gripPosition.y,
+                    model.data.gripPosition.z
+                );
+
+                this.app.visualizer.updateGripSphere();
+                this.app.ui.updateGripPositionDisplay();
+                this.app.visualizer.updateHandPosition();
+                this.app.ui.updateStatistics();
+
+                Utils.showNotification("Model loaded from gallery", "success");
+            }
+
+            async deleteModel(id) {
+                const model = this.models.find(m => m.id === id);
+
+                if (model && model.isCloud) {
+                    await this.app.supabase.deleteModelFromServer(id);
+                }
+
+                this.models = this.models.filter(m => m.id !== id);
+                this.saveToStorage();
+                this.renderGallery();
+                Utils.showNotification("Model deleted", "success");
+            }
+
+            async saveCurrentModel() {
+                if (this.app.blocks.placedBlocks.length === 0) {
+                    Utils.showNotification("Nothing to save", "warning");
+                    return;
+                }
+
+                const weaponData = {
+                    version: "2.0",
+                    blocks: this.app.blocks.placedBlocks.map(block => ({
+                        x: block.position.x,
+                        y: block.position.y,
+                        z: block.position.z,
+                        material: block.type
+                    })),
+                    gripPosition: {
+                        x: this.app.state.gripPosition.x,
+                        y: this.app.state.gripPosition.y,
+                        z: this.app.state.gripPosition.z
+                    }
+                };
+
+                await this.saveModel(weaponData);
+            }
+        }
+
+        class WeaponConstructor {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x1a1a1a);
+
+                this.state = new AppState();
+                this.dom = new DOMCache();
+                this.camera = new CameraManager(this);
+                this.renderer = null;
+                this.lighting = new LightingManager(this);
+                this.visualizer = new Visualizer(this);
+                this.render = new RenderManager(this);
+                this.blocks = new BlockManager(this);
+                this.physics = new PhysicsCalculator(this);
+                this.input = new InputHandler(this);
+                this.optimize = new OptimizeManager(this);
+                this.saveLoad = new SaveLoadManager(this);
+                this.ui = new UIManager(this);
+                this.supabase = new SupabaseManager(this);
+                this.gallery = new GalleryManager(this);
+
+                this.renderer = this.render.renderer;
+
+                this.saveLoad.autoLoadWeapon();
+                this.ui.updateStatistics();
+                this.ui.updateGripPositionDisplay();
+                this.ui.updateMaterialIndicator();
+                this.startAnimationLoop();
+            }
+
+            startAnimationLoop() {
+                const animate = () => {
+                    requestAnimationFrame(animate);
+
+                    this.camera.applyInertia();
+
+                    const now = Date.now();
+                    if (!this.state.isOptimizeMode && now - this.render.lastVisibilityUpdate > 100) {
+                        this.render.updateBlockVisibility();
+                        this.render.lastVisibilityUpdate = now;
+                    }
+
+                    this.render.render();
+                };
+                animate();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            window.weaponConstructor = new WeaponConstructor();
+        });
+    </script>
+</body>
+
+</html>
