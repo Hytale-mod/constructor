@@ -4115,18 +4115,24 @@
                         }
                     }
 
+                    const payload = {
+                        user_id: this.user.id,
+                        name: modelData.name,
+                        description: modelData.description,
+                        category: modelData.category,
+                        is_public: modelData.is_public,
+                        data: modelData.data,
+                        thumbnail: modelData.thumbnail
+                    };
+
+                    // Добавляем ID только если это обновление существующей модели
+                    if (modelData.cloudId) {
+                        payload.id = modelData.cloudId;
+                    }
+
                     const { data, error } = await this.supabase
                         .from('weapon_models')
-                        .upsert([{
-                            id: modelData.id || undefined,
-                            user_id: this.user.id,
-                            name: modelData.name,
-                            description: modelData.description,
-                            category: modelData.category,
-                            is_public: modelData.is_public,
-                            data: modelData.data,
-                            thumbnail: modelData.thumbnail
-                        }])
+                        .upsert([payload])
                         .select()
                         .single();
 
@@ -4623,7 +4629,7 @@
                 }
 
                 const modelData = {
-                    id: this.currentModelForSync.cloudData?.id || this.currentModelForSync.id,
+                    cloudId: this.currentModelForSync.cloudData?.id,
                     name: name,
                     description: description || null,
                     category: category,
@@ -4879,4 +4885,3 @@
 </body>
 
 </html>
-
