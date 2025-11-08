@@ -4612,6 +4612,8 @@
                 const description = document.getElementById('sync-description').value.trim();
                 const isPublic = document.querySelector('input[name="visibility"]:checked').value === 'public';
 
+                console.log('Submit sync:', { name, category, description, isPublic });
+
                 if (!name) {
                     Utils.showNotification('Name is required', 'warning');
                     return;
@@ -4638,7 +4640,11 @@
                     thumbnail: this.currentModelForSync.thumbnail
                 };
 
+                console.log('Model data to save:', modelData);
+
                 const result = await this.app.supabase.saveModelToServer(modelData);
+
+                console.log('Save result:', result);
 
                 if (result) {
                     document.getElementById('sync-modal').style.display = 'none';
