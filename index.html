@@ -370,6 +370,7 @@
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             flex: 1;
+            align-content: start;
         }
 
         .gallery-item {
@@ -380,6 +381,7 @@
             overflow: hidden;
             cursor: pointer;
             transition: border-color 0.3s;
+            margin: 0;
         }
 
         .gallery-item:hover {
@@ -476,6 +478,117 @@
             color: #4CAF50;
             font-size: 16px;
         }
+
+        .gallery-item-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+            padding: 8px;
+            font-size: 10px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .gallery-item:hover .gallery-item-info {
+            opacity: 1;
+        }
+
+        .gallery-item-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .gallery-item-author {
+            color: #4CAF50;
+            font-size: 9px;
+        }
+
+        .gallery-item-category {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(76, 175, 80, 0.8);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .gallery-item-actions {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: flex;
+            gap: 3px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .gallery-item:hover .gallery-item-actions {
+            opacity: 1;
+        }
+
+        .gallery-action-btn {
+            width: 22px;
+            height: 22px;
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            border-radius: 3px;
+            color: white;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .gallery-action-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .gallery-action-btn.sync {
+            background: rgba(76, 175, 80, 0.7);
+        }
+
+        .gallery-action-btn.sync:hover {
+            background: rgba(76, 175, 80, 0.9);
+        }
+
+        .gallery-action-btn.delete {
+            background: rgba(244, 67, 54, 0.7);
+        }
+
+        .gallery-action-btn.delete:hover {
+            background: rgba(244, 67, 54, 0.9);
+        }
+
+        .btn-toggle.active {
+            background: #4CAF50;
+        }
+
+        .public-gallery-item {
+            position: relative;
+        }
+
+        .public-load-btn {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .gallery-item:hover .public-load-btn {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -532,6 +645,26 @@
                     <button id="material-metal" class="btn btn-toggle" data-material="metal">Metal (2)</button>
                     <button id="material-magic" class="btn btn-toggle" data-material="magic">Magic (3)</button>
                 </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                        <input type="color" id="color-wood" value="#8B4513"
+                            style="width: 100%; height: 25px; cursor: pointer;">
+                        <button id="reset-color-wood" class="btn btn-secondary btn-sm"
+                            style="font-size: 9px; padding: 2px;">Default</button>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                        <input type="color" id="color-metal" value="#C0C0C0"
+                            style="width: 100%; height: 25px; cursor: pointer;">
+                        <button id="reset-color-metal" class="btn btn-secondary btn-sm"
+                            style="font-size: 9px; padding: 2px;">Default</button>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                        <input type="color" id="color-magic" value="#00BFFF"
+                            style="width: 100%; height: 25px; cursor: pointer;">
+                        <button id="reset-color-magic" class="btn btn-secondary btn-sm"
+                            style="font-size: 9px; padding: 2px;">Default</button>
+                    </div>
+                </div>
             </div>
 
             <div class="parameter-group">
@@ -577,6 +710,9 @@
                     <label style="color: #aaa; margin-top: 5px; display: block;">Magic Glow: <span
                             id="magic-value">0.30</span></label>
                     <input type="range" id="magic-slider" min="0" max="100" value="30" style="width: 100%;">
+                    <label style="color: #aaa; margin-top: 5px; display: block;">Magic Pulse: <span
+                            id="pulse-value">0.00</span> Hz</label>
+                    <input type="range" id="pulse-slider" min="0" max="200" value="0" step="2" style="width: 100%;">
                     <label style="color: #aaa; margin-top: 5px; display: block;">Point Lights: <span
                             id="point-value">0.30</span></label>
                     <input type="range" id="point-slider" min="0" max="100" value="30" style="width: 100%;">
@@ -671,16 +807,30 @@
 
     <div id="gallery-panel">
         <div class="gallery-header">
-            <h3>Models Gallery</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div style="display: flex; gap: 10px;">
+                    <button id="tab-my-models" class="btn btn-sm btn-toggle active">My Models</button>
+                    <button id="tab-public-gallery" class="btn btn-sm btn-toggle">Public</button>
+                </div>
+                <button id="toggle-gallery" class="btn btn-secondary btn-sm">Hide</button>
+            </div>
             <div class="auth-buttons">
                 <button id="login-btn" class="btn btn-primary btn-sm">Login</button>
                 <button id="logout-btn" class="btn btn-secondary btn-sm" style="display: none;">Logout</button>
                 <span id="user-info" style="display: none; font-size: 10px; color: #aaa;"></span>
             </div>
-            <button id="toggle-gallery" class="btn btn-secondary btn-sm">Hide</button>
         </div>
-        <div style="padding: 10px; border-bottom: 1px solid #3a3a3a;">
-            <button id="sync-btn" class="btn btn-primary" style="width: 100%; display: none;">Sync with Cloud</button>
+
+        <div id="public-filters" style="padding: 10px; border-bottom: 1px solid #3a3a3a; display: none;">
+            <input type="text" id="public-search" placeholder="🔍 Search by name or author..."
+                style="width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: white; border-radius: 5px; margin-bottom: 10px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                <button class="btn btn-sm btn-toggle category-filter" data-category="Sword">⚔️ Sword</button>
+                <button class="btn btn-sm btn-toggle category-filter" data-category="Staff">🪄 Staff</button>
+                <button class="btn btn-sm btn-toggle category-filter" data-category="Shield">🛡️ Shield</button>
+                <button class="btn btn-sm btn-toggle category-filter" data-category="Axe">🪓 Axe</button>
+                <button class="btn btn-sm btn-toggle category-filter" data-category="Bow">🏹 Bow</button>
+            </div>
         </div>
         <div id="gallery-content" class="gallery-grid">
             <!-- Превью будут добавляться динамически -->
@@ -696,6 +846,70 @@
     </div>
 
     <div id="notification"></div>
+
+    <!-- Nickname Modal -->
+    <div id="nickname-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: #2a2a2a; padding: 30px; border-radius: 10px; max-width: 400px; width: 90%;">
+            <h2 style="margin: 0 0 20px 0; color: #4CAF50;">Choose Your Nickname</h2>
+            <input type="text" id="nickname-input" placeholder="Enter nickname (3-20 chars)" maxlength="20"
+                style="width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: white; border-radius: 5px; margin-bottom: 15px;">
+            <div style="display: flex; gap: 10px;">
+                <button id="nickname-cancel" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                <button id="nickname-submit" class="btn btn-primary" style="flex: 1;">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync Model Modal -->
+    <div id="sync-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+        <div
+            style="background: #2a2a2a; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <h2 style="margin: 0 0 20px 0; color: #4CAF50;">Sync Model to Cloud</h2>
+
+            <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 5px;">Name *</label>
+            <input type="text" id="sync-name" placeholder="Weapon name" maxlength="50"
+                style="width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: white; border-radius: 5px; margin-bottom: 15px;">
+
+            <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 5px;">Category *</label>
+            <select id="sync-category"
+                style="width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: white; border-radius: 5px; margin-bottom: 15px;">
+                <option value="">Select category...</option>
+                <option value="Sword">Sword</option>
+                <option value="Staff">Staff</option>
+                <option value="Shield">Shield</option>
+                <option value="Axe">Axe</option>
+                <option value="Bow">Bow</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <input type="text" id="sync-category-custom" placeholder="Enter custom category" maxlength="30"
+                style="width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: white; border-radius: 5px; margin-bottom: 15px; display: none;">
+
+            <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 5px;">Description
+                (optional)</label>
+            <textarea id="sync-description" placeholder="Brief description (max 200 chars)" maxlength="200"
+                style="width: 100%; padding: 10px; background: #333; border: 1px solid #555; color: white; border-radius: 5px; margin-bottom: 15px; resize: vertical; min-height: 60px;"></textarea>
+
+            <label style="color: #aaa; font-size: 12px; display: block; margin-bottom: 10px;">Visibility</label>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                    <input type="radio" name="visibility" value="private" checked>
+                    <span style="color: white; margin-left: 5px;">🔒 Private (only you can see)</span>
+                </label>
+                <label style="display: block; cursor: pointer;">
+                    <input type="radio" name="visibility" value="public">
+                    <span style="color: white; margin-left: 5px;">🌐 Public (visible in gallery)</span>
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button id="sync-cancel" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                <button id="sync-submit" class="btn btn-primary" style="flex: 1;">Save to Cloud</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const CONSTANTS = {
@@ -715,12 +929,14 @@
                 metal: { PIERCING: 1.0, SLASHING: 1.0, BLUNT: 1.0 },
                 magic: { PIERCING: 0.8, SLASHING: 0.7, BLUNT: 0.9 }
             },
-            COLORS: {
+            DEFAULT_COLORS: {
                 wood: 0x8B4513,
                 metal: 0xC0C0C0,
                 magic: 0x00BFFF
             },
-            MATERIALS_ARRAY: ['wood', 'metal', 'magic']
+            MATERIALS_ARRAY: ['wood', 'metal', 'magic'],
+            ADMIN_EMAIL: 'oleg.makushev.2017@gmail.com',
+            PUBLIC_MODEL_LIMIT: 5
         };
 
         class Utils {
@@ -768,7 +984,24 @@
                     }
                     rleCompressed.push(currentValue, count);
 
-                    const header = [255, data.gripPosition.x, data.gripPosition.y, data.gripPosition.z];
+                    const colors = data.colors || {
+                        wood: CONSTANTS.DEFAULT_COLORS.wood,
+                        metal: CONSTANTS.DEFAULT_COLORS.metal,
+                        magic: CONSTANTS.DEFAULT_COLORS.magic
+                    };
+
+                    const header = [
+                        255,
+                        1, // VERSION MARKER - новый формат с colors
+                        data.gripPosition.x, data.gripPosition.y, data.gripPosition.z,
+                        // Wood RGB
+                        (colors.wood >> 16) & 0xFF, (colors.wood >> 8) & 0xFF, colors.wood & 0xFF,
+                        // Metal RGB
+                        (colors.metal >> 16) & 0xFF, (colors.metal >> 8) & 0xFF, colors.metal & 0xFF,
+                        // Magic RGB
+                        (colors.magic >> 16) & 0xFF, (colors.magic >> 8) & 0xFF, colors.magic & 0xFF
+                    ];
+
                     const fullData = new Uint8Array(header.length + rleCompressed.length);
                     fullData.set(header);
                     fullData.set(rleCompressed, header.length);
@@ -792,11 +1025,31 @@
                     const inflated = pako.inflate(charCodes);
 
                     let gripPosition = null;
+                    let colors = null;
                     let rleData = inflated;
 
                     if (inflated[0] === 255) {
-                        gripPosition = { x: inflated[1], y: inflated[2], z: inflated[3] };
-                        rleData = inflated.slice(4);
+                        const version = inflated[1];
+
+                        if (version === 1) {
+                            // Новый формат с colors
+                            gripPosition = { x: inflated[2], y: inflated[3], z: inflated[4] };
+                            colors = {
+                                wood: (inflated[5] << 16) | (inflated[6] << 8) | inflated[7],
+                                metal: (inflated[8] << 16) | (inflated[9] << 8) | inflated[10],
+                                magic: (inflated[11] << 16) | (inflated[12] << 8) | inflated[13]
+                            };
+                            rleData = inflated.slice(14);
+                        } else {
+                            // Старый формат (version != 1 или grip координаты на месте version)
+                            gripPosition = { x: inflated[1], y: inflated[2], z: inflated[3] };
+                            colors = {
+                                wood: CONSTANTS.DEFAULT_COLORS.wood,
+                                metal: CONSTANTS.DEFAULT_COLORS.metal,
+                                magic: CONSTANTS.DEFAULT_COLORS.magic
+                            };
+                            rleData = inflated.slice(4);
+                        }
                     }
 
                     const decompressed = new Uint8Array(CONSTANTS.GRID.WIDTH * CONSTANTS.GRID.LENGTH * CONSTANTS.GRID.HEIGHT);
@@ -825,13 +1078,14 @@
                     }
 
                     return {
-                        version: gripPosition ? "2.0+" : "1.0 (legacy)",
+                        version: colors ? "2.1" : (gripPosition ? "2.0+" : "1.0 (legacy)"),
                         blocks: blocks,
                         gripPosition: gripPosition || {
                             x: Math.floor(CONSTANTS.GRID.LENGTH / 2),
                             y: Math.floor(CONSTANTS.GRID.HEIGHT / 2),
                             z: Math.floor(CONSTANTS.GRID.WIDTH / 2)
                         },
+                        colors: colors,
                         metadata: {
                             blockCount: blocks.length,
                             created: new Date().toISOString(),
@@ -889,7 +1143,8 @@
                     'export-data', 'ambient-slider', 'ambient-value',
                     'directional-slider', 'directional-value',
                     'magic-slider', 'magic-value', 'point-slider', 'point-value',
-                    'renderer-container'
+                    'renderer-container', 'pulse-slider', 'pulse-value', 'color-wood', 'color-metal', 'color-magic',
+                    'reset-color-wood', 'reset-color-metal', 'reset-color-magic'
                 ];
 
                 ids.forEach(id => {
@@ -921,21 +1176,32 @@
                 this.sharedEdgesGeometry = new THREE.EdgesGeometry(this.sharedGeometry);
                 this.materials = {
                     wood: new THREE.MeshPhongMaterial({
-                        color: CONSTANTS.COLORS.wood,
+                        color: this.app.state.customColors.wood,
                         shininess: 30
                     }),
                     metal: new THREE.MeshPhongMaterial({
-                        color: CONSTANTS.COLORS.metal,
+                        color: this.app.state.customColors.metal,
                         shininess: 100
                     }),
                     magic: new THREE.MeshPhongMaterial({
-                        color: CONSTANTS.COLORS.magic,
-                        emissive: 0x00BFFF,
+                        color: this.app.state.customColors.magic,
+                        emissive: this.app.state.customColors.magic,
                         emissiveIntensity: 0.3,
                         shininess: 30
                     })
                 };
-                this.edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+                this.edgesMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                this.edgesObject = null;
+                this.needsEdgesRebuild = true;
+                this.edgeInstancedMesh = null;
+                this.edgeInstanceCount = 0;
+                this.blockToEdgeIndex = new Map();
+                this.edgeOriginalMatrices = [];
+                this.blockInstancedMeshes = { wood: null, metal: null, magic: null };
+                this.blockInstanceCounts = { wood: 0, metal: 0, magic: 0 };
+                this.blockToInstanceIndex = new Map(); // block → {material, index}
+                this.blockOriginalMatrices = { wood: [], metal: [], magic: [] };
+                this.needsBlocksRebuild = true;
             }
 
             placeBlock(material, position, updateAnalysis = true, skipAdjacencyCheck = false) {
@@ -953,23 +1219,16 @@
                     return true;
                 }
 
-                const block = new THREE.Mesh(
-                    this.sharedGeometry,
-                    this.materials[material].clone()
-                );
+                const block = new THREE.Object3D();
 
                 block.position.set(position.x + 0.5, position.y + 0.5, position.z + 0.5);
 
-                const edgeLines = new THREE.LineSegments(this.sharedEdgesGeometry, this.edgesMaterial);
-                edgeLines.visible = this.app.state.isOutlineEnabled;
-                block.add(edgeLines);
+                this.needsEdgesRebuild = true;
 
                 this.app.scene.add(block);
 
                 block.matrixAutoUpdate = false;
                 block.updateMatrix();
-                edgeLines.matrixAutoUpdate = false;
-                edgeLines.updateMatrix();
 
                 const blockInfo = {
                     object: block,
@@ -981,6 +1240,8 @@
                 this.blockObjects.push(block);
                 this.grid[position.y][position.x][position.z] = blockInfo;
                 this.blockInfoMap.set(`${position.x},${position.y},${position.z}`, blockInfo);
+
+                this.needsBlocksRebuild = true;
 
                 const mirrorPositions = this.getMirrorPositions(position);
                 mirrorPositions.forEach(mirrorPos => {
@@ -1022,6 +1283,9 @@
 
                     this.app.scene.remove(blockInfo.object);
                     this.grid[pos.y][pos.x][pos.z] = null;
+
+                    this.needsEdgesRebuild = true;
+                    this.needsBlocksRebuild = true;
 
                     const index = this.placedBlocks.indexOf(blockInfo);
                     if (index > -1) {
@@ -1131,14 +1395,221 @@
                 );
                 this.blockInfoMap.clear();
                 this.blockObjects = [];
+
+                this.needsBlocksRebuild = true;
+                this.needsEdgesRebuild = true;
             }
 
             resetBlockColors() {
                 this.placedBlocks.forEach(block => {
                     if (block.object && block.object.material) {
-                        block.object.material.color.setHex(CONSTANTS.COLORS[block.type]);
+                        block.object.material.color.setHex(this.app.state.customColors[block.type]);
                         block.object.material.needsUpdate = true;
                     }
+                });
+            }
+
+            rebuildEdgesInstanced() {
+                console.log('rebuildEdgesInstanced called, blocks:', this.placedBlocks.length);
+                if (this.edgeInstancedMesh) {
+                    this.app.scene.remove(this.edgeInstancedMesh);
+                }
+
+                if (!this.app.state.isOutlineEnabled || this.placedBlocks.length === 0) return;
+
+                // 12 рёбер на блок
+                const edgesPerBlock = 12;
+                this.edgeInstanceCount = this.placedBlocks.length * edgesPerBlock;
+                this.edgeOriginalMatrices = [];
+                console.log('Total instances:', this.edgeInstanceCount);
+
+                // Геометрия одного ребра (линия длиной 1)
+                const geometry = new THREE.CylinderGeometry(0.01, 0.01, 1, 4); // Тонкий цилиндр
+
+                this.edgeInstancedMesh = new THREE.InstancedMesh(
+                    geometry,
+                    this.edgesMaterial,
+                    this.edgeInstanceCount
+                );
+
+                console.log('InstancedMesh created:', this.edgeInstancedMesh);
+
+                const matrix = new THREE.Matrix4();
+                const position = new THREE.Vector3();
+                const scale = new THREE.Vector3(1, 1, 1);
+                const quaternion = new THREE.Quaternion();
+
+                let instanceIndex = 0;
+
+                this.placedBlocks.forEach((block, blockIndex) => {
+                    this.blockToEdgeIndex.set(block, instanceIndex);
+                    const x = block.position.x, y = block.position.y, z = block.position.z;
+
+                    // 12 рёбер куба (начало → конец)
+                    const edges = [
+                        // Нижняя грань (z)
+                        { pos: [x, y + 0.5, z], rot: [0, 0, 0] },
+                        { pos: [x + 0.5, y, z], rot: [0, 0, Math.PI / 2] },
+                        { pos: [x + 1, y + 0.5, z], rot: [0, 0, Math.PI] },
+                        { pos: [x + 0.5, y + 1, z], rot: [0, 0, -Math.PI / 2] },
+
+                        // Верхняя грань (z+1)
+                        { pos: [x, y + 0.5, z + 1], rot: [0, 0, 0] },
+                        { pos: [x + 0.5, y, z + 1], rot: [0, 0, Math.PI / 2] },
+                        { pos: [x + 1, y + 0.5, z + 1], rot: [0, 0, Math.PI] },
+                        { pos: [x + 0.5, y + 1, z + 1], rot: [0, 0, -Math.PI / 2] },
+
+                        // Вертикальные (по Z)
+                        { pos: [x, y, z + 0.5], rot: [Math.PI / 2, 0, 0] },
+                        { pos: [x + 1, y, z + 0.5], rot: [Math.PI / 2, 0, 0] },
+                        { pos: [x + 1, y + 1, z + 0.5], rot: [Math.PI / 2, 0, 0] },
+                        { pos: [x, y + 1, z + 0.5], rot: [Math.PI / 2, 0, 0] }
+                    ];
+
+                    edges.forEach(edge => {
+                        position.set(...edge.pos);
+                        quaternion.setFromEuler(new THREE.Euler(...edge.rot));
+                        matrix.compose(position, quaternion, scale);
+                        this.edgeInstancedMesh.setMatrixAt(instanceIndex, matrix);
+                        this.edgeOriginalMatrices[instanceIndex] = matrix.clone();
+                        instanceIndex++;
+                    });
+                });
+
+                this.edgeInstancedMesh.instanceMatrix.needsUpdate = true;
+                this.app.scene.add(this.edgeInstancedMesh);
+                console.log('Added to scene, children count:', this.app.scene.children.length);
+                this.needsEdgesRebuild = false;
+            }
+
+            updateEdgesVisibility() {
+                if (!this.edgeInstancedMesh) return;
+
+                const matrix = new THREE.Matrix4();
+                const hiddenMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
+
+                this.placedBlocks.forEach(block => {
+                    const startIndex = this.blockToEdgeIndex.get(block);
+                    if (startIndex === undefined) return;
+
+                    for (let i = 0; i < 12; i++) {
+                        const index = startIndex + i;
+
+                        if (!this.edgeOriginalMatrices[index]) continue;
+
+                        if (!block.object.visible) {
+                            this.edgeInstancedMesh.setMatrixAt(index, hiddenMatrix);
+                        } else {
+                            this.edgeInstancedMesh.setMatrixAt(index, this.edgeOriginalMatrices[index]);
+                        }
+                    }
+                });
+
+                this.edgeInstancedMesh.instanceMatrix.needsUpdate = true;
+            }
+
+            rebuildBlocksInstanced() {
+                console.log('rebuildBlocksInstanced called, blocks:', this.placedBlocks.length);
+
+                // Удаляем старые меши
+                Object.values(this.blockInstancedMeshes).forEach(mesh => {
+                    if (mesh) this.app.scene.remove(mesh);
+                });
+
+                this.blockToInstanceIndex.clear();
+                Object.keys(this.blockOriginalMatrices).forEach(mat => {
+                    this.blockOriginalMatrices[mat] = [];
+                });
+
+                if (this.placedBlocks.length === 0) return;
+
+                // Группируем блоки по материалам
+                const blocksByMaterial = { wood: [], metal: [], magic: [] };
+                this.placedBlocks.forEach(block => {
+                    // Добавить проверку:
+                    if (block.type && blocksByMaterial[block.type]) {
+                        blocksByMaterial[block.type].push(block);
+                    } else {
+                        console.warn('Invalid block type:', block);
+                    }
+                });
+
+                // Создаём InstancedMesh для каждого материала
+                const matrix = new THREE.Matrix4();
+                const position = new THREE.Vector3();
+                const scale = new THREE.Vector3(1, 1, 1);
+                const quaternion = new THREE.Quaternion();
+
+                Object.keys(blocksByMaterial).forEach(material => {
+                    const blocks = blocksByMaterial[material];
+                    if (blocks.length === 0) return;
+
+                    this.blockInstanceCounts[material] = blocks.length;
+
+                    this.blockInstancedMeshes[material] = new THREE.InstancedMesh(
+                        this.sharedGeometry,
+                        this.materials[material],
+                        blocks.length
+                    );
+
+                    blocks.forEach((block, index) => {
+                        // Центр блока
+                        position.set(
+                            block.position.x + 0.5,
+                            block.position.y + 0.5,
+                            block.position.z + 0.5
+                        );
+
+                        matrix.compose(position, quaternion, scale);
+                        this.blockInstancedMeshes[material].setMatrixAt(index, matrix);
+                        this.blockOriginalMatrices[material][index] = matrix.clone();
+
+                        this.blockToInstanceIndex.set(block, { material, index });
+                    });
+
+                    this.blockInstancedMeshes[material].instanceMatrix.needsUpdate = true;
+                    this.app.scene.add(this.blockInstancedMeshes[material]);
+                });
+
+                this.needsBlocksRebuild = false;
+                console.log('Blocks rebuilt:', this.blockInstanceCounts);
+            }
+
+            updateBlocksVisibility() {
+                if (this.placedBlocks.length === 0) return;
+
+                const hiddenMatrix = new THREE.Matrix4().makeScale(0, 0, 0);
+
+                this.placedBlocks.forEach(block => {
+                    const instanceInfo = this.blockToInstanceIndex.get(block);
+                    if (!instanceInfo) return;
+
+                    const { material, index } = instanceInfo;
+                    const mesh = this.blockInstancedMeshes[material];
+                    if (!mesh || !this.blockOriginalMatrices[material][index]) return;
+
+                    let shouldHide = !block.object.visible;
+
+                    // Проверка cutaway
+                    if (!shouldHide && this.app.state.isCutaway) {
+                        this.tempVec1.set(
+                            block.position.x + 0.5,
+                            block.position.y + 0.5,
+                            block.position.z + 0.5
+                        ).sub(this.app.visualizer.cutPlane.position);
+                        const side = this.app.visualizer.cutPlane.plane.normal.dot(this.tempVec1);
+                        shouldHide = side < 0;
+                    }
+
+                    if (shouldHide) {
+                        mesh.setMatrixAt(index, hiddenMatrix);
+                    } else {
+                        mesh.setMatrixAt(index, this.blockOriginalMatrices[material][index]);
+                    }
+                });
+
+                Object.values(this.blockInstancedMeshes).forEach(mesh => {
+                    if (mesh) mesh.instanceMatrix.needsUpdate = true;
                 });
             }
 
@@ -1657,12 +2128,39 @@
             }
 
             updateCursorFromMouse() {
+                if (this.app.state.isOptimizeMode) return;
+
+                if (this.app.blocks.placedBlocks.length === 0) {
+                    this.app.visualizer.highlightedCell.visible = true;
+                    return;
+                }
+
                 this.app.camera.raycaster.setFromCamera(this.app.camera.mouse, this.app.camera.camera);
-                const blockIntersects = this.app.camera.raycaster.intersectObjects(this.app.blocks.blockObjects);
+                const meshes = Object.values(this.app.blocks.blockInstancedMeshes).filter(m => m);
+                const blockIntersects = this.app.camera.raycaster.intersectObjects(meshes);
+
+                if (blockIntersects.length === 0) {
+                    this.app.visualizer.highlightedCell.visible = false;
+                    return;
+                }
+
+                this.app.visualizer.highlightedCell.visible = true;
 
                 if (blockIntersects.length > 0) {
                     const intersect = blockIntersects[0];
-                    const position = intersect.object.position.clone().sub(new THREE.Vector3(0.5, 0.5, 0.5)).floor();
+
+                    // Получаем блок из instanceId
+                    let block = null;
+                    for (const [b, info] of this.app.blocks.blockToInstanceIndex) {
+                        if (this.app.blocks.blockInstancedMeshes[info.material] === intersect.object &&
+                            info.index === intersect.instanceId) {
+                            block = b;
+                            break;
+                        }
+                    }
+
+                    if (!block) return;
+                    const position = block.position.clone();
 
                     if (this.app.state.isDeleteMode) {
                         this.app.state.cursorPosition.copy(position);
@@ -1716,6 +2214,7 @@
             onMouseClick(event) {
                 if (this.isRotating) return;
                 if (this.app.state.isOptimizeMode) return;
+                if (!this.app.visualizer.highlightedCell.visible) return;
 
                 if (this.app.state.isDeleteMode) {
                     this.app.blocks.deleteBlock(this.app.state.cursorPosition);
@@ -1855,6 +2354,9 @@
                 this.pointLightsIntensity = 0.3;
                 this.pointLights = [];
                 this.setupLighting();
+                this.magicPulseFrequency = 0; // Hz
+                this.magicPulsePhase = 0; // текущая фаза 0-1
+
             }
 
             setupLighting() {
@@ -1972,11 +2474,12 @@
             createHighlightedCell() {
                 const geometry = new THREE.BoxGeometry(1, 1, 1);
                 const material = new THREE.MeshBasicMaterial({
-                    color: CONSTANTS.COLORS[this.app.state.currentMaterial],
+                    color: this.app.state.customColors[this.app.state.currentMaterial],
                     transparent: true,
-                    opacity: 0.5
+                    opacity: 0.5,
                 });
                 this.highlightedCell = new THREE.Mesh(geometry, material);
+                this.highlightedCell.scale.set(1.01, 1.01, 1.01);
                 this.app.scene.add(this.highlightedCell);
                 this.updateHighlightedCell();
             }
@@ -2068,7 +2571,7 @@
                         material.opacity = 0.7;
                     }
                 } else {
-                    const currentColor = CONSTANTS.COLORS[this.app.state.currentMaterial];
+                    const currentColor = this.app.state.customColors[this.app.state.currentMaterial];
                     if (material.color.getHex() !== currentColor) {
                         material.color.setHex(currentColor);
                     }
@@ -2194,12 +2697,12 @@
             }
 
             updateTransparencyMode() {
-                this.app.blocks.placedBlocks.forEach(block => {
-                    const material = block.object.material;
-                    material.transparent = this.app.state.isTransparent;
-                    material.opacity = this.app.state.isTransparent ? 0.7 : 1;
-                    material.wireframe = this.app.state.isTransparent;
-                    material.needsUpdate = true;
+                Object.values(this.app.blocks.blockInstancedMeshes).forEach(mesh => {
+                    if (!mesh) return;
+                    mesh.material.transparent = this.app.state.isTransparent;
+                    mesh.material.opacity = this.app.state.isTransparent ? 0.7 : 1;
+                    mesh.material.wireframe = this.app.state.isTransparent;
+                    mesh.material.needsUpdate = true;
                 });
             }
 
@@ -2211,21 +2714,7 @@
                 );
                 this.frustum.setFromProjectionMatrix(this.cameraViewProjectionMatrix);
 
-                this.app.blocks.placedBlocks.forEach(block => {
-                    this.tempVec1.set(
-                        block.position.x + 0.5,
-                        block.position.y + 0.5,
-                        block.position.z + 0.5
-                    );
-
-                    block.object.visible = this.frustum.containsPoint(this.tempVec1);
-
-                    if (block.object.visible && this.app.state.isCutaway) {
-                        this.tempVec1.sub(this.app.visualizer.cutPlane.position);
-                        const side = this.app.visualizer.cutPlane.plane.normal.dot(this.tempVec1);
-                        block.object.visible = side >= 0;
-                    }
-                });
+                this.app.blocks.updateBlocksVisibility();
             }
 
             setupPostProcessing() {
@@ -2238,17 +2727,17 @@
                 this.composer.addPass(renderPass);
 
                 const ssaoPass = new THREE.SSAOPass(this.app.scene, this.app.camera.camera, width, height);
-                ssaoPass.kernelRadius = 8;
-                ssaoPass.minDistance = 0.001;
-                ssaoPass.maxDistance = 0.1;
+                ssaoPass.kernelRadius = 32;
+                ssaoPass.minDistance = 0.0005;
+                ssaoPass.maxDistance = 0.2;
                 ssaoPass.output = THREE.SSAOPass.OUTPUT.Default;
                 this.composer.addPass(ssaoPass);
 
                 const bloomPass = new THREE.UnrealBloomPass(
                     new THREE.Vector2(width, height),
-                    0.5,
-                    0.4,
-                    0.85
+                    0.6,
+                    0.1,
+                    0.2
                 );
                 this.composer.addPass(bloomPass);
 
@@ -2275,6 +2764,7 @@
                 this.cubeCameras = [];
                 this.cubeRenderTargets = [];
                 this.savedStates = null;
+                this.lastCubeCameraUpdate = 0;
             }
 
             toggleOptimizeMode() {
@@ -2301,6 +2791,11 @@
                         x: this.app.state.gripPosition.x,
                         y: this.app.state.gripPosition.y,
                         z: this.app.state.gripPosition.z
+                    },
+                    colors: {
+                        wood: this.app.state.customColors.wood,
+                        metal: this.app.state.customColors.metal,
+                        magic: this.app.state.customColors.magic
                     }
                 };
                 const compressed = Utils.compressWeaponData(weaponData);
@@ -2342,15 +2837,20 @@
 
                 ['grip-mode', 'toggle-cutaway', 'toggle-transparency', 'analyze-weapon', 'toggle-outline',
                     'material-wood', 'material-metal', 'material-magic',
-                    'symmetry-x', 'symmetry-y', 'symmetry-z'].forEach(id => {
+                    'symmetry-x', 'symmetry-y', 'symmetry-z', 'import-weapon', 'clear-weapon'].forEach(id => {
                         document.getElementById(id).disabled = true;
                     });
 
                 document.getElementById('toggle-postfx').disabled = false;
 
-                this.app.blocks.placedBlocks.forEach(block => {
-                    block.object.visible = false;
+                Object.values(this.app.blocks.blockInstancedMeshes).forEach(mesh => {
+                    if (mesh) mesh.visible = false;
                 });
+
+                // Скрываем InstancedMesh обводки
+                if (this.app.blocks.edgeInstancedMesh) {
+                    this.app.blocks.edgeInstancedMesh.visible = false;
+                }
 
                 if (this.app.visualizer.highlightedCell) {
                     this.app.visualizer.highlightedCell.visible = false;
@@ -2406,14 +2906,14 @@
                     }
                     localStorage.removeItem('weaponOptimizeCache');
                 } else {
-                    this.app.blocks.placedBlocks.forEach(block => {
-                        block.object.visible = true;
+                    Object.values(this.app.blocks.blockInstancedMeshes).forEach(mesh => {
+                        if (mesh) mesh.visible = true;
                     });
                 }
 
                 ['grip-mode', 'toggle-cutaway', 'toggle-transparency', 'analyze-weapon', 'toggle-outline',
                     'material-wood', 'material-metal', 'material-magic',
-                    'symmetry-x', 'symmetry-y', 'symmetry-z'].forEach(id => {
+                    'symmetry-x', 'symmetry-y', 'symmetry-z', 'import-weapon', 'clear-weapon'].forEach(id => {
                         document.getElementById(id).disabled = false;
                     });
 
@@ -2429,10 +2929,9 @@
                     if (this.savedStates.isOutlineEnabled !== this.app.state.isOutlineEnabled) {
                         this.app.state.isOutlineEnabled = this.savedStates.isOutlineEnabled;
                         document.getElementById('toggle-outline').classList.toggle('active', this.savedStates.isOutlineEnabled);
-                        this.app.blocks.placedBlocks.forEach(block => {
-                            const edges = block.object.children[0];
-                            if (edges) edges.visible = this.savedStates.isOutlineEnabled;
-                        });
+                        if (this.app.blocks.edgeInstancedMesh) {
+                            this.app.blocks.edgeInstancedMesh.visible = this.savedStates.isOutlineEnabled;
+                        }
                     }
 
                     if (this.savedStates.isFixedPivot !== this.app.state.isFixedPivot) {
@@ -2466,20 +2965,13 @@
                     const geometry = this.createMeshFromFaces(visibleFaces);
 
                     const meshMaterial = new THREE.MeshPhongMaterial({
-                        color: CONSTANTS.COLORS[material],
-                        emissive: material === 'magic' ? 0x00BFFF : 0x000000,
+                        color: this.app.state.customColors[material],
+                        emissive: material === 'magic' ? this.app.state.customColors.magic : 0x000000,
                         emissiveIntensity: material === 'magic' ? this.app.lighting.magicEmissionIntensity : 0,
                         flatShading: material === 'magic'
                     });
 
                     const mesh = new THREE.Mesh(geometry, meshMaterial);
-
-                    if (this.app.state.isOutlineEnabled) {
-                        const edges = new THREE.EdgesGeometry(geometry);
-                        const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
-                        const edgeLines = new THREE.LineSegments(edges, edgesMaterial);
-                        mesh.add(edgeLines);
-                    }
 
                     if (mesh && mesh.material) {
                         this.app.scene.add(mesh);
@@ -2503,14 +2995,14 @@
                 let topPercent, maxCameras;
 
                 if (faceCount < 50) {
-                    topPercent = 0.4;
-                    maxCameras = 5;
+                    topPercent = 0.6;
+                    maxCameras = 20;
                 } else if (faceCount < 200) {
-                    topPercent = 0.25;
-                    maxCameras = 10;
+                    topPercent = 0.3;
+                    maxCameras = 30;
                 } else {
                     topPercent = 0.15;
-                    maxCameras = 20;
+                    maxCameras = 50;
                 }
 
                 const topCount = Math.min(Math.ceil(faceCount * topPercent), maxCameras);
@@ -2526,7 +3018,18 @@
                     });
 
                     const cubeCamera = new THREE.CubeCamera(0.1, 1000, renderTarget);
-                    cubeCamera.position.copy(face.center);
+
+                    const normal = new THREE.Vector3();
+                    switch (face.face) {
+                        case 'right': normal.set(1, 0, 0); break;
+                        case 'left': normal.set(-1, 0, 0); break;
+                        case 'top': normal.set(0, 1, 0); break;
+                        case 'bottom': normal.set(0, -1, 0); break;
+                        case 'front': normal.set(0, 0, 1); break;
+                        case 'back': normal.set(0, 0, -1); break;
+                    }
+
+                    cubeCamera.position.copy(face.center).add(normal.multiplyScalar(0.6));
 
                     this.cubeRenderTargets.push(renderTarget);
                     this.cubeCameras.push(cubeCamera);
@@ -2534,21 +3037,14 @@
 
                     const faceGeometry = this.createMeshFromFaces([face]);
                     const faceMaterial = new THREE.MeshStandardMaterial({
-                        color: CONSTANTS.COLORS.metal,
+                        color: this.app.state.customColors.metal,
                         metalness: 0.9,
                         roughness: 0.15,
                         envMap: renderTarget.texture,
-                        envMapIntensity: 1.0
+                        envMapIntensity: 0.7
                     });
 
                     const faceMesh = new THREE.Mesh(faceGeometry, faceMaterial);
-
-                    if (this.app.state.isOutlineEnabled) {
-                        const edges = new THREE.EdgesGeometry(faceGeometry);
-                        const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
-                        const edgeLines = new THREE.LineSegments(edges, edgesMaterial);
-                        faceMesh.add(edgeLines);
-                    }
 
                     this.app.scene.add(faceMesh);
                     this.optimizedMeshes.push(faceMesh);
@@ -2579,21 +3075,14 @@
 
                         const clusterGeometry = this.createMeshFromFaces(clusterFaces);
                         const clusterMaterial = new THREE.MeshStandardMaterial({
-                            color: CONSTANTS.COLORS.metal,
+                            color: this.app.state.customColors.metal,
                             metalness: 0.9,
                             roughness: 0.1,
                             envMap: this.cubeRenderTargets[index].texture,
-                            envMapIntensity: 1.2
+                            envMapIntensity: 0.7
                         });
 
                         const clusterMesh = new THREE.Mesh(clusterGeometry, clusterMaterial);
-
-                        if (this.app.state.isOutlineEnabled) {
-                            const edges = new THREE.EdgesGeometry(clusterGeometry);
-                            const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
-                            const edgeLines = new THREE.LineSegments(edges, edgesMaterial);
-                            clusterMesh.add(edgeLines);
-                        }
 
                         this.app.scene.add(clusterMesh);
                         this.optimizedMeshes.push(clusterMesh);
@@ -2601,6 +3090,7 @@
                 }
 
                 this.updateAllCubeCameras();
+                this.baseMagicIntensity = this.app.lighting.magicEmissionIntensity;
             }
 
             getVisibleFaces(positions) {
@@ -2842,7 +3332,9 @@
 
             updateAllCubeCameras() {
                 const originalBackground = this.app.scene.background;
-                this.app.scene.background = new THREE.Color(0x293133);
+                const metalColor = new THREE.Color(this.app.state.customColors.metal);
+                metalColor.multiplyScalar(0.3); // Затемняем на 70%
+                this.app.scene.background = metalColor;
 
                 this.optimizedMeshes.forEach(mesh => {
                     if (mesh && mesh.material && mesh.material.metalness > 0) {
@@ -2881,6 +3373,11 @@
                         x: this.app.state.gripPosition.x,
                         y: this.app.state.gripPosition.y,
                         z: this.app.state.gripPosition.z
+                    },
+                    colors: { // Добавить
+                        wood: this.app.state.customColors.wood,
+                        metal: this.app.state.customColors.metal,
+                        magic: this.app.state.customColors.magic
                     },
                     metadata: {
                         blockCount: this.app.blocks.placedBlocks.length,
@@ -2924,6 +3421,15 @@
 
                 this.clearWeapon();
 
+                if (weaponData.colors) {
+                    this.app.state.customColors = weaponData.colors;
+                    ['wood', 'metal', 'magic'].forEach(material => {
+                        const hex = weaponData.colors[material].toString(16).padStart(6, '0').toUpperCase();
+                        this.app.dom.get(`color-${material}`).value = '#' + hex;
+                    });
+                    this.app.ui.updateMaterialColors();
+                }
+
                 weaponData.blocks.forEach(blockData => {
                     const position = new THREE.Vector3(blockData.x, blockData.y, blockData.z);
                     this.app.blocks.placeBlock(blockData.material, position, false, true);
@@ -2965,6 +3471,11 @@
                         x: this.app.state.gripPosition.x,
                         y: this.app.state.gripPosition.y,
                         z: this.app.state.gripPosition.z
+                    },
+                    colors: {
+                        wood: this.app.state.customColors.wood,
+                        metal: this.app.state.customColors.metal,
+                        magic: this.app.state.customColors.magic
                     }
                 };
 
@@ -2972,6 +3483,7 @@
                 if (compressed) {
                     localStorage.setItem('weaponAutoSave', compressed);
                 }
+                console.log('Weapon saved');
             }
 
             autoLoadWeapon() {
@@ -2980,6 +3492,15 @@
 
                 const weaponData = Utils.decompressWeaponData(compressed);
                 if (!weaponData || !weaponData.blocks) return;
+
+                if (weaponData.colors) {
+                    this.app.state.customColors = weaponData.colors;
+                    ['wood', 'metal', 'magic'].forEach(material => {
+                        const hex = weaponData.colors[material].toString(16).padStart(6, '0').toUpperCase();
+                        this.app.dom.get(`color-${material}`).value = '#' + hex;
+                    });
+                    this.app.ui.updateMaterialColors();
+                }
 
                 weaponData.blocks.forEach(blockData => {
                     const position = new THREE.Vector3(blockData.x, blockData.y, blockData.z);
@@ -3011,6 +3532,14 @@
                     this.app.scene.remove(this.app.visualizer.centerOfPercussionSphere);
                     this.app.visualizer.centerOfPercussionSphere = null;
                 }
+
+                this.app.state.cursorPosition.set(
+                    Math.floor(CONSTANTS.GRID.LENGTH / 2),
+                    Math.floor(CONSTANTS.GRID.HEIGHT / 2),
+                    Math.floor(CONSTANTS.GRID.WIDTH / 2)
+                );
+                this.app.visualizer.highlightedCell.visible = true;
+                this.app.visualizer.updateHighlightedCell();
 
                 this.app.state.gripPosition.set(
                     Math.floor(CONSTANTS.GRID.LENGTH / 2),
@@ -3081,6 +3610,25 @@
                     document.getElementById(id).addEventListener('click', handler);
                 });
 
+                ['wood', 'metal', 'magic'].forEach(material => {
+                    this.app.dom.get(`color-${material}`).addEventListener('input', (e) => {
+                        const color = parseInt(e.target.value.replace('#', ''), 16);
+                        this.app.state.customColors[material] = color;
+                        this.updateMaterialColors();
+                    });
+
+                    this.app.dom.get(`color-${material}`).addEventListener('change', () => {
+                        this.app.saveLoad.autoSaveWeapon();
+                    });
+
+                    this.app.dom.get(`reset-color-${material}`).addEventListener('click', () => {
+                        const defaultColor = CONSTANTS.DEFAULT_COLORS[material];
+                        this.app.state.customColors[material] = defaultColor;
+                        this.app.dom.get(`color-${material}`).value = '#' + defaultColor.toString(16).padStart(6, '0').toUpperCase();
+                        this.updateMaterialColors();
+                    });
+                });
+
                 this.setupLightingSliders();
 
                 document.getElementById('toggle-postfx').disabled = true;
@@ -3092,6 +3640,25 @@
                 document.getElementById('save-weapon').addEventListener('click', () => this.app.gallery.saveCurrentModel());
 
                 this.app.dom.get('toggle-panel').addEventListener('click', () => this.togglePanel());
+            }
+
+            updateMaterialColors() {
+                // Обновляем materials
+                Object.keys(this.app.blocks.materials).forEach(material => {
+                    this.app.blocks.materials[material].color.setHex(this.app.state.customColors[material]);
+                    if (material === 'magic') {
+                        this.app.blocks.materials[material].emissive.setHex(this.app.state.customColors[material]);
+                    }
+                });
+
+                // Обновляем InstancedMesh
+                Object.keys(this.app.blocks.blockInstancedMeshes).forEach(material => {
+                    const mesh = this.app.blocks.blockInstancedMeshes[material];
+                    if (mesh) mesh.material.needsUpdate = true;
+                });
+
+                // Обновляем курсор
+                this.app.visualizer.updateHighlightedCell();
             }
 
             setupLightingSliders() {
@@ -3111,16 +3678,16 @@
                     this.app.lighting.magicEmissionIntensity = e.target.value / 100;
                     this.app.dom.get('magic-value').textContent = this.app.lighting.magicEmissionIntensity.toFixed(2);
 
-                    this.app.blocks.placedBlocks.forEach(block => {
-                        if (block.type === 'magic') {
-                            block.object.material.emissive.setHex(0x00BFFF);
-                            block.object.material.emissiveIntensity = this.app.lighting.magicEmissionIntensity;
-                        }
-                    });
+                    const magicMesh = this.app.blocks.blockInstancedMeshes.magic;
+                    if (magicMesh) {
+                        magicMesh.material.emissive.setHex(this.app.state.customColors.magic);
+                        magicMesh.material.emissiveIntensity = this.app.lighting.magicEmissionIntensity;
+                        magicMesh.material.needsUpdate = true;
+                    }
 
                     if (this.app.state.isOptimizeMode) {
                         this.app.optimize.optimizedMeshes.forEach(mesh => {
-                            if (mesh.material.emissive && mesh.material.emissive.getHex() === 0x00BFFF) {
+                            if (mesh.material.emissive && mesh.material.emissive.getHex() === this.app.state.customColors.magic) {
                                 mesh.material.emissiveIntensity = this.app.lighting.magicEmissionIntensity;
                             }
                         });
@@ -3131,6 +3698,11 @@
                     if (this.app.state.isOptimizeMode) {
                         this.app.optimize.updateAllCubeCameras();
                     }
+                });
+
+                this.app.dom.get('pulse-slider').addEventListener('input', (e) => {
+                    this.app.lighting.magicPulseFrequency = e.target.value / 100;
+                    this.app.dom.get('pulse-value').textContent = this.app.lighting.magicPulseFrequency.toFixed(2);
                 });
 
                 this.app.dom.get('point-slider').addEventListener('input', (e) => {
@@ -3157,12 +3729,7 @@
                     outline: {
                         prop: 'isOutlineEnabled',
                         btn: 'toggle-outline',
-                        onToggle: () => {
-                            this.app.blocks.placedBlocks.forEach(block => {
-                                const edges = block.object.children[0];
-                                if (edges) edges.visible = this.app.state.isOutlineEnabled;
-                            });
-                        }
+                        onToggle: () => this.app.blocks.rebuildEdgesInstanced()
                     },
                     transparency: {
                         prop: 'isTransparent',
@@ -3285,6 +3852,7 @@
                 };
                 this.app.dom.get('current-material').textContent = materialMap[this.app.state.currentMaterial];
                 this.app.dom.get('current-material').className = `material-${this.app.state.currentMaterial}`;
+                this.app.dom.get('material-indicator').style.color = '#' + this.app.state.customColors[this.app.state.currentMaterial].toString(16).padStart(6, '0');
             }
 
             calculatePhysics() {
@@ -3342,6 +3910,12 @@
                     Math.floor(CONSTANTS.GRID.HEIGHT / 2),
                     Math.floor(CONSTANTS.GRID.WIDTH / 2)
                 );
+
+                this.customColors = {
+                    wood: CONSTANTS.DEFAULT_COLORS.wood,
+                    metal: CONSTANTS.DEFAULT_COLORS.metal,
+                    magic: CONSTANTS.DEFAULT_COLORS.magic
+                };
             }
         }
 
@@ -3350,9 +3924,9 @@
                 this.app = app;
                 this.supabase = null;
                 this.user = null;
+                this.userProfile = null;
                 this.isInitialized = false;
 
-                // ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ
                 const SUPABASE_URL = 'https://jcidzjkbgvjisvcrdfmv.supabase.co';
                 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaWR6amtiZ3ZqaXN2Y3JkZm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0ODAwNzAsImV4cCI6MjA3NzA1NjA3MH0.hUkYKMuSmgHJZm2dIpGVwSaiVYYpSZ-mEApWsVsk1Kk';
 
@@ -3363,16 +3937,18 @@
                 try {
                     this.supabase = supabase.createClient(url, key);
 
-                    // Проверяем текущую сессию
                     const { data: { session } } = await this.supabase.auth.getSession();
                     if (session) {
                         this.user = session.user;
+                        await this.loadUserProfile();
                         this.onAuthStateChange(true);
                     }
 
-                    // Слушаем изменения авторизации
-                    this.supabase.auth.onAuthStateChange((event, session) => {
+                    this.supabase.auth.onAuthStateChange(async (event, session) => {
                         this.user = session?.user || null;
+                        if (this.user) {
+                            await this.loadUserProfile();
+                        }
                         this.onAuthStateChange(!!session);
                     });
 
@@ -3382,25 +3958,101 @@
                 }
             }
 
+            async loadUserProfile() {
+                if (!this.user) return;
+
+                try {
+                    const { data, error } = await this.supabase
+                        .from('users')
+                        .select('*')
+                        .eq('user_id', this.user.id)
+                        .single();
+
+                    if (error && error.code !== 'PGRST116') throw error;
+
+                    this.userProfile = data;
+
+                    // Если профиля нет - показываем модалку никнейма
+                    if (!data) {
+                        this.showNicknameModal();
+                    }
+                } catch (error) {
+                    console.error('Load profile error:', error);
+                }
+            }
+
+            showNicknameModal() {
+                const modal = document.getElementById('nickname-modal');
+                modal.style.display = 'flex';
+
+                document.getElementById('nickname-submit').onclick = async () => {
+                    const nickname = document.getElementById('nickname-input').value.trim();
+
+                    if (nickname.length < 3) {
+                        Utils.showNotification('Nickname must be at least 3 characters', 'warning');
+                        return;
+                    }
+
+                    const success = await this.createUserProfile(nickname);
+                    if (success) {
+                        modal.style.display = 'none';
+                        document.getElementById('nickname-input').value = '';
+                    }
+                };
+
+                document.getElementById('nickname-cancel').onclick = async () => {
+                    await this.signOut();
+                    modal.style.display = 'none';
+                };
+            }
+
+            async createUserProfile(nickname) {
+                try {
+                    const { data, error } = await this.supabase
+                        .from('users')
+                        .insert([{
+                            user_id: this.user.id,
+                            nickname: nickname,
+                            is_admin: this.user.email === CONSTANTS.ADMIN_EMAIL
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) {
+                        if (error.code === '23505') { // Unique violation
+                            Utils.showNotification('Nickname already taken', 'error');
+                        } else {
+                            throw error;
+                        }
+                        return false;
+                    }
+
+                    this.userProfile = data;
+                    Utils.showNotification(`Welcome, ${nickname}!`, 'success');
+                    this.onAuthStateChange(true);
+                    return true;
+                } catch (error) {
+                    console.error('Create profile error:', error);
+                    Utils.showNotification('Failed to create profile', 'error');
+                    return false;
+                }
+            }
+
             onAuthStateChange(isAuthenticated) {
                 const loginBtn = document.getElementById('login-btn');
                 const logoutBtn = document.getElementById('logout-btn');
                 const userInfo = document.getElementById('user-info');
-                const syncBtn = document.getElementById('sync-btn');
 
-                if (isAuthenticated && this.user) {
+                if (isAuthenticated && this.userProfile) {
                     loginBtn.style.display = 'none';
                     logoutBtn.style.display = 'block';
-                    syncBtn.style.display = 'block';
-                    userInfo.textContent = this.user.email || 'User';
+                    userInfo.textContent = `@${this.userProfile.nickname}`;
                     userInfo.style.display = 'block';
 
-                    // Загружаем модели с сервера
-                    this.app.gallery.loadFromServer();
+                    this.app.gallery.loadMyModels();
                 } else {
                     loginBtn.style.display = 'block';
                     logoutBtn.style.display = 'none';
-                    syncBtn.style.display = 'none';
                     userInfo.style.display = 'none';
                     userInfo.textContent = '';
                 }
@@ -3409,16 +4061,13 @@
             async signInWithGoogle() {
                 try {
                     let redirectTo = window.location.origin;
-
                     if (window.location.pathname.includes('/constructor/')) {
                         redirectTo = `${window.location.origin}/constructor`;
                     }
 
                     const { data, error } = await this.supabase.auth.signInWithOAuth({
                         provider: 'google',
-                        options: {
-                            redirectTo: redirectTo
-                        }
+                        options: { redirectTo: redirectTo }
                     });
 
                     if (error) throw error;
@@ -3432,7 +4081,7 @@
                 try {
                     const { error } = await this.supabase.auth.signOut();
                     if (error) throw error;
-
+                    this.userProfile = null;
                     Utils.showNotification('Logged out successfully', 'success');
                 } catch (error) {
                     console.error('Logout error:', error);
@@ -3440,27 +4089,51 @@
                 }
             }
 
-            async saveModelToServer(model) {
-                if (!this.user) {
-                    Utils.showNotification('Please login to save to cloud', 'warning');
+            async saveModelToServer(modelData) {
+                if (!this.user || !this.userProfile) {
+                    Utils.showNotification('Please login first', 'warning');
+                    return false;
+                }
+
+                if (this.userProfile.is_banned) {
+                    Utils.showNotification('You are banned from uploading models', 'error');
                     return false;
                 }
 
                 try {
+                    // Проверка лимита публичных моделей
+                    if (modelData.is_public) {
+                        const { count } = await this.supabase
+                            .from('weapon_models')
+                            .select('*', { count: 'exact', head: true })
+                            .eq('user_id', this.user.id)
+                            .eq('is_public', true);
+
+                        if (count >= CONSTANTS.PUBLIC_MODEL_LIMIT) {
+                            Utils.showNotification(`Limit: max ${CONSTANTS.PUBLIC_MODEL_LIMIT} public models`, 'error');
+                            return false;
+                        }
+                    }
+
                     const { data, error } = await this.supabase
                         .from('weapon_models')
-                        .insert([{
+                        .upsert([{
+                            id: modelData.id || undefined,
                             user_id: this.user.id,
-                            name: `Weapon ${new Date().toLocaleString()}`,
-                            data: model.data,
-                            thumbnail: model.thumbnail
+                            name: modelData.name,
+                            description: modelData.description,
+                            category: modelData.category,
+                            is_public: modelData.is_public,
+                            data: modelData.data,
+                            thumbnail: modelData.thumbnail
                         }])
-                        .select();
+                        .select()
+                        .single();
 
                     if (error) throw error;
 
                     Utils.showNotification('Model saved to cloud', 'success');
-                    return data[0];
+                    return data;
                 } catch (error) {
                     console.error('Save to server error:', error);
                     Utils.showNotification('Failed to save to cloud', 'error');
@@ -3468,7 +4141,7 @@
                 }
             }
 
-            async loadModelsFromServer() {
+            async loadMyModels() {
                 if (!this.user) return [];
 
                 try {
@@ -3479,17 +4152,39 @@
                         .order('created_at', { ascending: false });
 
                     if (error) throw error;
-
-                    return data.map(item => ({
-                        id: item.id,
-                        data: item.data,
-                        thumbnail: item.thumbnail,
-                        created: item.created_at,
-                        isCloud: true
-                    }));
+                    return data || [];
                 } catch (error) {
-                    console.error('Load from server error:', error);
-                    Utils.showNotification('Failed to load from cloud', 'error');
+                    console.error('Load models error:', error);
+                    return [];
+                }
+            }
+
+            async loadPublicModels(filters = {}) {
+                try {
+                    let query = this.supabase
+                        .from('weapon_models')
+                        .select(`
+                    *,
+                    users!inner(nickname)
+                `)
+                        .eq('is_public', true);
+
+                    if (filters.category) {
+                        query = query.eq('category', filters.category);
+                    }
+
+                    if (filters.search) {
+                        query = query.or(`name.ilike.%${filters.search}%,users.nickname.ilike.%${filters.search}%`);
+                    }
+
+                    query = query.order('created_at', { ascending: false });
+
+                    const { data, error } = await query;
+                    if (error) throw error;
+
+                    return data || [];
+                } catch (error) {
+                    console.error('Load public models error:', error);
                     return [];
                 }
             }
@@ -3515,14 +4210,68 @@
                 }
             }
 
-            async syncModels() {
-                if (!this.user) {
-                    Utils.showNotification('Please login to sync', 'warning');
-                    return;
-                }
+            async toggleModelVisibility(id, isPublic) {
+                if (!this.user) return false;
 
-                Utils.showNotification('Syncing...', 'success');
-                await this.app.gallery.syncWithServer();
+                try {
+                    const { error } = await this.supabase
+                        .from('weapon_models')
+                        .update({ is_public: isPublic })
+                        .eq('id', id)
+                        .eq('user_id', this.user.id);
+
+                    if (error) throw error;
+
+                    Utils.showNotification(isPublic ? 'Model published' : 'Model made private', 'success');
+                    return true;
+                } catch (error) {
+                    console.error('Toggle visibility error:', error);
+                    return false;
+                }
+            }
+
+            // Админские функции
+            async adminDeleteModel(id) {
+                if (!this.userProfile?.is_admin) return false;
+
+                try {
+                    const { error } = await this.supabase
+                        .from('weapon_models')
+                        .update({ is_public: false })
+                        .eq('id', id);
+
+                    if (error) throw error;
+
+                    Utils.showNotification('Model removed from gallery', 'success');
+                    return true;
+                } catch (error) {
+                    console.error('Admin delete error:', error);
+                    return false;
+                }
+            }
+
+            async adminBanUser(userId) {
+                if (!this.userProfile?.is_admin) return false;
+
+                try {
+                    // Бан пользователя
+                    await this.supabase
+                        .from('users')
+                        .update({ is_banned: true })
+                        .eq('user_id', userId);
+
+                    // Скрыть все его публичные модели
+                    await this.supabase
+                        .from('weapon_models')
+                        .update({ is_public: false })
+                        .eq('user_id', userId);
+
+                    Utils.showNotification('User banned', 'success');
+                    return true;
+                } catch (error) {
+                    console.error('Ban user error:', error);
+                    return false;
+                }
             }
         }
 
@@ -3530,17 +4279,86 @@
             constructor(app) {
                 this.app = app;
                 this.storageKey = 'weaponGallery';
-                this.models = this.loadFromStorage();
+                this.localModels = this.loadFromStorage();
+                this.currentTab = 'my'; // 'my' или 'public'
+                this.currentModelForSync = null;
+                this.publicFilters = {
+                    category: null,
+                    search: ''
+                };
                 this.setupUI();
-                this.renderGallery();
+                this.renderMyModels();
             }
 
             setupUI() {
+                // Tab switching
+                document.getElementById('tab-my-models').addEventListener('click', () => {
+                    this.switchTab('my');
+                });
+
+                document.getElementById('tab-public-gallery').addEventListener('click', () => {
+                    this.switchTab('public');
+                });
+
+                // Toggle panel
                 document.getElementById('toggle-gallery').addEventListener('click', () => this.togglePanel());
                 document.getElementById('gallery-toggle-btn').addEventListener('click', () => this.togglePanel());
+
+                // Auth buttons
                 document.getElementById('login-btn').addEventListener('click', () => this.app.supabase.signInWithGoogle());
                 document.getElementById('logout-btn').addEventListener('click', () => this.app.supabase.signOut());
-                document.getElementById('sync-btn').addEventListener('click', () => this.app.supabase.syncModels());
+
+                // Sync modal
+                document.getElementById('sync-category').addEventListener('change', (e) => {
+                    const customInput = document.getElementById('sync-category-custom');
+                    customInput.style.display = e.target.value === 'Other' ? 'block' : 'none';
+                });
+
+                document.getElementById('sync-cancel').addEventListener('click', () => {
+                    document.getElementById('sync-modal').style.display = 'none';
+                });
+
+                document.getElementById('sync-submit').addEventListener('click', () => {
+                    this.submitSync();
+                });
+
+                // Public gallery filters
+                document.getElementById('public-search').addEventListener('input', (e) => {
+                    this.publicFilters.search = e.target.value;
+                    this.loadPublicGallery();
+                });
+
+                document.querySelectorAll('.category-filter').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const category = e.target.dataset.category;
+
+                        if (this.publicFilters.category === category) {
+                            this.publicFilters.category = null;
+                            e.target.classList.remove('active');
+                        } else {
+                            document.querySelectorAll('.category-filter').forEach(b => b.classList.remove('active'));
+                            this.publicFilters.category = category;
+                            e.target.classList.add('active');
+                        }
+
+                        this.loadPublicGallery();
+                    });
+                });
+            }
+
+            switchTab(tab) {
+                this.currentTab = tab;
+
+                document.getElementById('tab-my-models').classList.toggle('active', tab === 'my');
+                document.getElementById('tab-public-gallery').classList.toggle('active', tab === 'public');
+
+                document.getElementById('public-filters').style.display = tab === 'public' ? 'block' : 'none';
+
+                if (tab === 'my') {
+                    this.renderMyModels();
+                } else {
+                    this.loadPublicGallery();
+                }
             }
 
             togglePanel() {
@@ -3562,113 +4380,280 @@
                 return data ? JSON.parse(data) : [];
             }
 
-            async loadFromServer() {
-                const serverModels = await this.app.supabase.loadModelsFromServer();
+            saveToStorage() {
+                localStorage.setItem(this.storageKey, JSON.stringify(this.localModels));
+            }
 
-                // Объединяем локальные и серверные модели
-                const localIds = new Set(this.models.map(m => m.id));
-                serverModels.forEach(model => {
-                    if (!localIds.has(model.id)) {
-                        this.models.push(model);
+            async loadMyModels() {
+                const container = document.getElementById('gallery-content');
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #aaa;">Loading...</div>';
+
+                // Объединяем локальные и облачные модели
+                const cloudModels = await this.app.supabase.loadMyModels();
+
+                // Добавляем cloudId к локальным если совпадают
+                const allModels = [...this.localModels];
+
+                cloudModels.forEach(cloudModel => {
+                    const localIndex = allModels.findIndex(m => m.id === cloudModel.id);
+                    if (localIndex >= 0) {
+                        allModels[localIndex].cloudData = cloudModel;
+                    } else {
+                        // Облачная модель, которой нет локально
+                        allModels.push({
+                            id: cloudModel.id,
+                            data: cloudModel.data,
+                            thumbnail: cloudModel.thumbnail,
+                            created: cloudModel.created_at,
+                            cloudData: cloudModel
+                        });
                     }
                 });
 
-                this.renderGallery();
-            }
-
-            saveToStorage() {
-                localStorage.setItem(this.storageKey, JSON.stringify(this.models));
-            }
-
-            async saveModel(weaponData) {
-                const thumbnail = await this.renderThumbnail();
-
-                const model = {
-                    id: Date.now(),
-                    data: weaponData,
-                    thumbnail: thumbnail,
-                    created: new Date().toISOString()
-                };
-
-                this.models.unshift(model);
+                this.localModels = allModels;
                 this.saveToStorage();
-                this.renderGallery();
-
-                Utils.showNotification("Model saved to gallery", "success");
+                this.renderMyModels();
             }
 
-            async syncWithServer() {
-                // Загружаем с сервера
-                await this.loadFromServer();
-
-                // Загружаем локальные модели на сервер
-                const localModels = this.models.filter(m => !m.isCloud);
-                for (const model of localModels) {
-                    await this.app.supabase.saveModelToServer(model);
-                }
-
-                // Перезагружаем все с сервера
-                this.models = await this.app.supabase.loadModelsFromServer();
-                this.saveToStorage();
-                this.renderGallery();
-
-                Utils.showNotification('Sync complete', 'success');
-            }
-
-            async renderThumbnail() {
-                const originalSize = {
-                    width: this.app.renderer.domElement.width,
-                    height: this.app.renderer.domElement.height
-                };
-
-                this.app.renderer.setSize(256, 256, false);
-                this.app.camera.camera.aspect = 1;
-                this.app.camera.camera.updateProjectionMatrix();
-
-                this.app.render.render();
-
-                const thumbnail = this.app.renderer.domElement.toDataURL('image/jpeg', 0.8);
-
-                this.app.renderer.setSize(originalSize.width, originalSize.height, false);
-                this.app.camera.camera.aspect = originalSize.width / originalSize.height;
-                this.app.camera.camera.updateProjectionMatrix();
-
-                return thumbnail;
-            }
-
-            renderGallery() {
+            renderMyModels() {
                 const container = document.getElementById('gallery-content');
                 container.innerHTML = '';
 
-                this.models.forEach(model => {
+                if (this.localModels.length === 0) {
+                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: #aaa;">No models yet</div>';
+                    return;
+                }
+
+                this.localModels.forEach(model => {
                     const item = document.createElement('div');
                     item.className = 'gallery-item';
-                    if (model.isCloud) {
-                        item.classList.add('cloud');
-                    }
 
                     const img = document.createElement('img');
                     img.src = model.thumbnail;
                     img.alt = 'Weapon model';
 
+                    // Категория badge
+                    if (model.cloudData?.category) {
+                        const categoryBadge = document.createElement('div');
+                        categoryBadge.className = 'gallery-item-category';
+                        categoryBadge.textContent = model.cloudData.category;
+                        item.appendChild(categoryBadge);
+                    }
+
+                    // Actions
+                    const actions = document.createElement('div');
+                    actions.className = 'gallery-item-actions';
+
+                    // Sync button
+                    const syncBtn = document.createElement('button');
+                    syncBtn.className = 'gallery-action-btn sync';
+                    syncBtn.innerHTML = model.cloudData ? '☁️' : '↑';
+                    syncBtn.title = model.cloudData ? 'Update cloud' : 'Upload to cloud';
+                    syncBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        this.showSyncModal(model);
+                    };
+                    actions.appendChild(syncBtn);
+
+                    // Visibility toggle (if synced)
+                    if (model.cloudData) {
+                        const visBtn = document.createElement('button');
+                        visBtn.className = 'gallery-action-btn';
+                        visBtn.innerHTML = model.cloudData.is_public ? '🌐' : '🔒';
+                        visBtn.title = model.cloudData.is_public ? 'Public' : 'Private';
+                        visBtn.onclick = async (e) => {
+                            e.stopPropagation();
+                            const newStatus = !model.cloudData.is_public;
+                            const success = await this.app.supabase.toggleModelVisibility(model.id, newStatus);
+                            if (success) {
+                                await this.loadMyModels();
+                            }
+                        };
+                        actions.appendChild(visBtn);
+                    }
+
+                    // Delete button
                     const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'gallery-item-delete';
+                    deleteBtn.className = 'gallery-action-btn delete';
                     deleteBtn.innerHTML = '×';
                     deleteBtn.onclick = (e) => {
                         e.stopPropagation();
                         this.deleteModel(model.id);
                     };
+                    actions.appendChild(deleteBtn);
+
+                    item.appendChild(actions);
+
+                    // Info overlay
+                    if (model.cloudData) {
+                        const info = document.createElement('div');
+                        info.className = 'gallery-item-info';
+                        info.innerHTML = `
+                    <div class="gallery-item-name">${model.cloudData.name}</div>
+                    <div class="gallery-item-author">by you</div>
+                `;
+                        item.appendChild(info);
+                    }
 
                     item.onclick = () => this.loadModel(model);
 
                     item.appendChild(img);
-                    item.appendChild(deleteBtn);
                     container.appendChild(item);
                 });
             }
 
+            async loadPublicGallery() {
+                const container = document.getElementById('gallery-content');
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #aaa;">Loading...</div>';
+
+                const models = await this.app.supabase.loadPublicModels(this.publicFilters);
+
+                container.innerHTML = '';
+
+                if (models.length === 0) {
+                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: #aaa;">No models found</div>';
+                    return;
+                }
+
+                models.forEach(model => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item public-gallery-item';
+
+                    const img = document.createElement('img');
+                    img.src = model.thumbnail;
+                    img.alt = model.name;
+
+                    // Category badge
+                    const categoryBadge = document.createElement('div');
+                    categoryBadge.className = 'gallery-item-category';
+                    categoryBadge.textContent = model.category;
+                    item.appendChild(categoryBadge);
+
+                    // Admin actions
+                    if (this.app.supabase.userProfile?.is_admin) {
+                        const adminActions = document.createElement('div');
+                        adminActions.className = 'gallery-item-actions';
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'gallery-action-btn delete';
+                        deleteBtn.innerHTML = '🗑️';
+                        deleteBtn.title = 'Remove from gallery';
+                        deleteBtn.onclick = async (e) => {
+                            e.stopPropagation();
+                            if (confirm('Remove this model from public gallery?')) {
+                                await this.app.supabase.adminDeleteModel(model.id);
+                                this.loadPublicGallery();
+                            }
+                        };
+                        adminActions.appendChild(deleteBtn);
+
+                        const banBtn = document.createElement('button');
+                        banBtn.className = 'gallery-action-btn delete';
+                        banBtn.innerHTML = '🚫';
+                        banBtn.title = 'Ban author';
+                        banBtn.onclick = async (e) => {
+                            e.stopPropagation();
+                            if (confirm(`Ban @${model.users.nickname}?`)) {
+                                await this.app.supabase.adminBanUser(model.user_id);
+                                this.loadPublicGallery();
+                            }
+                        };
+                        adminActions.appendChild(banBtn);
+
+                        item.appendChild(adminActions);
+                    }
+
+                    // Load button
+                    const loadBtn = document.createElement('button');
+                    loadBtn.className = 'btn btn-primary btn-sm public-load-btn';
+                    loadBtn.textContent = 'Load';
+                    loadBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        this.loadPublicModel(model);
+                    };
+                    item.appendChild(loadBtn);
+
+                    // Info
+                    const info = document.createElement('div');
+                    info.className = 'gallery-item-info';
+                    info.innerHTML = `
+                <div class="gallery-item-name">${model.name}</div>
+                <div class="gallery-item-author">@${model.users.nickname}</div>
+            `;
+                    item.appendChild(info);
+
+                    item.appendChild(img);
+                    container.appendChild(item);
+                });
+            }
+
+            showSyncModal(model) {
+                this.currentModelForSync = model;
+
+                document.getElementById('sync-name').value = model.cloudData?.name || '';
+                document.getElementById('sync-category').value = model.cloudData?.category || '';
+                document.getElementById('sync-description').value = model.cloudData?.description || '';
+
+                const isPublic = model.cloudData?.is_public || false;
+                document.querySelector(`input[name="visibility"][value="${isPublic ? 'public' : 'private'}"]`).checked = true;
+
+                document.getElementById('sync-modal').style.display = 'flex';
+            }
+
+            async submitSync() {
+                const name = document.getElementById('sync-name').value.trim();
+                let category = document.getElementById('sync-category').value;
+                const description = document.getElementById('sync-description').value.trim();
+                const isPublic = document.querySelector('input[name="visibility"]:checked').value === 'public';
+
+                if (!name) {
+                    Utils.showNotification('Name is required', 'warning');
+                    return;
+                }
+
+                if (category === 'Other') {
+                    category = document.getElementById('sync-category-custom').value.trim();
+                    if (!category) {
+                        Utils.showNotification('Please enter custom category', 'warning');
+                        return;
+                    }
+                } else if (!category) {
+                    Utils.showNotification('Category is required', 'warning');
+                    return;
+                }
+
+                const modelData = {
+                    id: this.currentModelForSync.cloudData?.id || this.currentModelForSync.id,
+                    name: name,
+                    description: description || null,
+                    category: category,
+                    is_public: isPublic,
+                    data: this.currentModelForSync.data,
+                    thumbnail: this.currentModelForSync.thumbnail
+                };
+
+                const result = await this.app.supabase.saveModelToServer(modelData);
+
+                if (result) {
+                    document.getElementById('sync-modal').style.display = 'none';
+                    await this.loadMyModels();
+                }
+            }
+
             loadModel(model) {
                 this.app.saveLoad.clearWeapon();
+
+                if (model.data.colors) {
+                    this.app.state.customColors = model.data.colors;
+                    ['wood', 'metal', 'magic'].forEach(material => {
+                        const hex = model.data.colors[material].toString(16).padStart(6, '0').toUpperCase();
+                        this.app.dom.get(`color-${material}`).value = '#' + hex;
+                        this.app.blocks.materials[material].color.setHex(model.data.colors[material]);
+                        if (material === 'magic') {
+                            this.app.blocks.materials[material].emissive.setHex(model.data.colors[material]);
+                        }
+                    });
+                }
 
                 model.data.blocks.forEach(blockData => {
                     const position = new THREE.Vector3(blockData.x, blockData.y, blockData.z);
@@ -3686,19 +4671,38 @@
                 this.app.visualizer.updateHandPosition();
                 this.app.ui.updateStatistics();
 
-                Utils.showNotification("Model loaded from gallery", "success");
+                Utils.showNotification("Model loaded", "success");
+            }
+
+            loadPublicModel(cloudModel) {
+                const modelData = {
+                    id: Date.now(),
+                    data: cloudModel.data,
+                    thumbnail: cloudModel.thumbnail,
+                    created: new Date().toISOString()
+                };
+
+                this.loadModel(modelData);
             }
 
             async deleteModel(id) {
-                const model = this.models.find(m => m.id === id);
+                const model = this.localModels.find(m => m.id === id);
 
-                if (model && model.isCloud) {
+                if (model?.cloudData) {
+                    if (!confirm('Delete from cloud too?')) {
+                        // Удалить только локально
+                        this.localModels = this.localModels.filter(m => m.id !== id);
+                        this.saveToStorage();
+                        this.renderMyModels();
+                        Utils.showNotification("Model deleted locally", "success");
+                        return;
+                    }
                     await this.app.supabase.deleteModelFromServer(id);
                 }
 
-                this.models = this.models.filter(m => m.id !== id);
+                this.localModels = this.localModels.filter(m => m.id !== id);
                 this.saveToStorage();
-                this.renderGallery();
+                this.renderMyModels();
                 Utils.showNotification("Model deleted", "success");
             }
 
@@ -3720,10 +4724,53 @@
                         x: this.app.state.gripPosition.x,
                         y: this.app.state.gripPosition.y,
                         z: this.app.state.gripPosition.z
+                    },
+                    colors: {
+                        wood: this.app.state.customColors.wood,
+                        metal: this.app.state.customColors.metal,
+                        magic: this.app.state.customColors.magic
                     }
                 };
 
                 await this.saveModel(weaponData);
+            }
+
+            async saveModel(weaponData) {
+                const thumbnail = await this.renderThumbnail();
+
+                const model = {
+                    id: Date.now(),
+                    data: weaponData,
+                    thumbnail: thumbnail,
+                    created: new Date().toISOString()
+                };
+
+                this.localModels.unshift(model);
+                this.saveToStorage();
+                this.renderMyModels();
+
+                Utils.showNotification("Model saved to gallery", "success");
+            }
+
+            async renderThumbnail() {
+                const originalSize = {
+                    width: this.app.renderer.domElement.width,
+                    height: this.app.renderer.domElement.height
+                };
+
+                this.app.renderer.setSize(256, 256, false);
+                this.app.camera.camera.aspect = 1;
+                this.app.camera.camera.updateProjectionMatrix();
+
+                this.app.render.render();
+
+                const thumbnail = this.app.renderer.domElement.toDataURL('image/jpeg', 0.8);
+
+                this.app.renderer.setSize(originalSize.width, originalSize.height, false);
+                this.app.camera.camera.aspect = originalSize.width / originalSize.height;
+                this.app.camera.camera.updateProjectionMatrix();
+
+                return thumbnail;
             }
         }
 
@@ -3758,15 +4805,65 @@
             }
 
             startAnimationLoop() {
+                let lastTime = performance.now();
+
                 const animate = () => {
                     requestAnimationFrame(animate);
 
+                    const now = performance.now();
+                    const deltaTime = (now - lastTime) / 1000;
+                    lastTime = now;
+
+                    // Пульсация magic блоков
+                    if (this.lighting.magicPulseFrequency > 0) {
+                        this.lighting.magicPulsePhase += deltaTime * this.lighting.magicPulseFrequency;
+                        this.lighting.magicPulsePhase = this.lighting.magicPulsePhase % 1;
+
+                        // Линейная пульсация 0→1→0
+                        const intensity = this.lighting.magicPulsePhase < 0.5
+                            ? this.lighting.magicPulsePhase * 2
+                            : (1 - this.lighting.magicPulsePhase) * 2;
+
+                        // Режим редактирования
+                        if (!this.state.isOptimizeMode && this.blocks.blockInstancedMeshes.magic) {
+                            this.blocks.blockInstancedMeshes.magic.material.emissiveIntensity =
+                                intensity * this.lighting.magicEmissionIntensity;
+                        }
+
+                        // Режим визуализации
+                        if (this.state.isOptimizeMode) {
+                            const currentEmissive = intensity * this.lighting.magicEmissionIntensity;
+
+                            this.optimize.optimizedMeshes.forEach(mesh => {
+                                if (!mesh.material) return;
+
+                                // Пульсация magic блоков
+                                if (mesh.material.emissive &&
+                                    mesh.material.emissive.getHex() === this.state.customColors.magic) {
+                                    mesh.material.emissiveIntensity = currentEmissive;
+                                }
+
+                                // Пульсация отражений на металле
+                                if (mesh.material.envMap && this.optimize.baseMagicIntensity > 0) {
+                                    const ratio = Math.min(currentEmissive / this.optimize.baseMagicIntensity, 1.0);
+                                    mesh.material.envMapIntensity = 0.6 * (0.5 + ratio * 0.5); // 0.3-0.6
+                                }
+                            });
+                        }
+                    }
+
                     this.camera.applyInertia();
 
-                    const now = Date.now();
                     if (!this.state.isOptimizeMode && now - this.render.lastVisibilityUpdate > 1000) {
                         this.render.updateBlockVisibility();
+                        this.blocks.updateEdgesVisibility();
                         this.render.lastVisibilityUpdate = now;
+                    }
+                    if (this.blocks.needsBlocksRebuild && !this.state.isOptimizeMode) {
+                        this.blocks.rebuildBlocksInstanced();
+                    }
+                    if (this.blocks.needsEdgesRebuild && !this.state.isOptimizeMode) {
+                        this.blocks.rebuildEdgesInstanced();
                     }
 
                     this.render.render();
