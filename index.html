@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weapon Constructor v2.0</title>
+    <title>Weapon Constructor v4.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
@@ -595,7 +595,7 @@
 <body>
     <div id="controls-panel">
         <div class="panel-content">
-            <div class="panel-title">Weapon Constructor v2.0</div>
+            <div class="panel-title">Weapon Constructor v4.0</div>
 
             <button id="help-toggle" class="help-toggle-btn">ℹ️ Show Controls Help</button>
 
@@ -3659,6 +3659,7 @@
 
                 // Обновляем курсор
                 this.app.visualizer.updateHighlightedCell();
+                this.updateMaterialIndicator();
             }
 
             setupLightingSliders() {
@@ -3852,7 +3853,7 @@
                 };
                 this.app.dom.get('current-material').textContent = materialMap[this.app.state.currentMaterial];
                 this.app.dom.get('current-material').className = `material-${this.app.state.currentMaterial}`;
-                this.app.dom.get('material-indicator').style.color = '#' + this.app.state.customColors[this.app.state.currentMaterial].toString(16).padStart(6, '0');
+                this.app.dom.get('current-material').style.color = '#' + this.app.state.customColors[this.app.state.currentMaterial].toString(16).padStart(6, '0');
             }
 
             calculatePhysics() {
@@ -3926,11 +3927,35 @@
                 this.user = null;
                 this.userProfile = null;
                 this.isInitialized = false;
+                this.currentAbortController = null;
 
                 const SUPABASE_URL = 'https://jcidzjkbgvjisvcrdfmv.supabase.co';
                 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjaWR6amtiZ3ZqaXN2Y3JkZm12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0ODAwNzAsImV4cCI6MjA3NzA1NjA3MH0.hUkYKMuSmgHJZm2dIpGVwSaiVYYpSZ-mEApWsVsk1Kk';
 
                 this.initSupabase(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+
+            async loadWithTimeout(promise, timeoutMs = 30000) { // Увеличить до 30 секунд
+                console.log('Starting request with timeout:', timeoutMs);
+                const startTime = Date.now();
+
+                try {
+                    const result = await Promise.race([
+                        promise,
+                        new Promise((_, reject) =>
+                            setTimeout(() => {
+                                console.log('Request timed out after', Date.now() - startTime, 'ms');
+                                reject(new Error('Request timeout'));
+                            }, timeoutMs)
+                        )
+                    ]);
+
+                    console.log('Request completed in', Date.now() - startTime, 'ms');
+                    return result;
+                } catch (error) {
+                    console.error('Request failed:', error, 'after', Date.now() - startTime, 'ms');
+                    throw error;
+                }
             }
 
             async initSupabase(url, key) {
@@ -4090,6 +4115,7 @@
             }
 
             async signOut() {
+                console.log('Signing out...');
                 try {
                     const { error } = await this.supabase.auth.signOut();
                     if (error) throw error;
@@ -4177,33 +4203,53 @@
                 }
             }
 
-            async loadPublicModels(filters = {}) {
+            async loadPublicModels(filters = {}, offset = 0, limit = 30) {
                 try {
-                    let query = this.supabase
-                        .from('weapon_models')
-                        .select(`
-                    *,
-                    users!inner(nickname)
-                `)
-                        .eq('is_public', true);
+                    console.log('Loading public models:', { filters, offset, limit });
 
-                    if (filters.category) {
-                        query = query.eq('category', filters.category);
-                    }
+                    return await this.safeQuery(async () => {
+                        let query = this.supabase
+                            .from('weapon_models')
+                            .select('*')
+                            .eq('is_public', true);
 
-                    if (filters.search) {
-                        query = query.or(`name.ilike.%${filters.search}%,users.nickname.ilike.%${filters.search}%`);
-                    }
+                        if (filters.category) {
+                            query = query.eq('category', filters.category);
+                        }
 
-                    query = query.order('created_at', { ascending: false });
+                        if (filters.search) {
+                            query = query.ilike('name', `%${filters.search}%`);
+                        }
 
-                    const { data, error } = await query;
-                    if (error) throw error;
+                        query = query
+                            .order('created_at', { ascending: false })
+                            .range(offset, offset + limit - 1);
 
-                    return data || [];
+                        const { data: models, error } = await query;
+
+                        if (error) throw error;
+
+                        // Подгружаем авторов
+                        if (models && models.length > 0) {
+                            const userIds = [...new Set(models.map(m => m.user_id))];
+
+                            const { data: users } = await this.supabase
+                                .from('users')
+                                .select('user_id, nickname')
+                                .in('user_id', userIds);
+
+                            models.forEach(model => {
+                                const user = users?.find(u => u.user_id === model.user_id);
+                                model.users = { nickname: user?.nickname || 'Unknown' };
+                            });
+                        }
+
+                        return models || [];
+                    });
+
                 } catch (error) {
                     console.error('Load public models error:', error);
-                    return [];
+                    throw error;
                 }
             }
 
@@ -4291,6 +4337,66 @@
                     return false;
                 }
             }
+
+            async safeQuery(queryFn, retries = 2) {
+                // Отменяем предыдущий запрос если есть
+                if (this.currentAbortController) {
+                    this.currentAbortController.abort();
+                }
+
+                for (let attempt = 0; attempt <= retries; attempt++) {
+                    try {
+                        this.currentAbortController = new AbortController();
+                        const signal = this.currentAbortController.signal;
+
+                        // Проверяем auth перед запросом
+                        const { data: { session } } = await this.supabase.auth.getSession();
+                        if (!session) {
+                            throw new Error('No active session');
+                        }
+
+                        // Выполняем запрос с timeout
+                        const result = await Promise.race([
+                            queryFn(),
+                            new Promise((_, reject) =>
+                                setTimeout(() => reject(new Error('Query timeout')), 15000)
+                            ),
+                            new Promise((_, reject) => {
+                                signal.addEventListener('abort', () => reject(new Error('Query aborted')));
+                            })
+                        ]);
+
+                        this.currentAbortController = null;
+                        return result;
+
+                    } catch (error) {
+                        console.log(`Query attempt ${attempt + 1} failed:`, error.message);
+
+                        if (attempt === retries) {
+                            throw error;
+                        }
+
+                        // Exponential backoff
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                    }
+                }
+            }
+
+            async checkConnection() {
+                try {
+                    const { data: { session }, error } = await this.supabase.auth.getSession();
+
+                    if (error || !session) {
+                        console.warn('Session invalid, refreshing...');
+                        await this.supabase.auth.refreshSession();
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('Connection check failed:', error);
+                    return false;
+                }
+            }
         }
 
         class GalleryManager {
@@ -4300,6 +4406,15 @@
                 this.localModels = this.loadFromStorage();
                 this.currentTab = 'my'; // 'my' или 'public'
                 this.currentModelForSync = null;
+
+                this.publicCache = []; // Кэш публичных моделей
+                this.publicPage = 0;
+                this.publicPageSize = 30;
+                this.publicHasMore = true;
+                this.publicLoading = false;
+                this.searchDebounceTimer = null;
+                this.intersectionObserver = null;
+
                 this.publicFilters = {
                     category: null,
                     search: ''
@@ -4324,8 +4439,10 @@
 
                 // Auth buttons
                 document.getElementById('login-btn').addEventListener('click', () => this.app.supabase.signInWithGoogle());
-                document.getElementById('logout-btn').addEventListener('click', () => this.app.supabase.signOut());
-
+                document.getElementById('logout-btn').addEventListener('click', () => {
+                    console.log('Logout clicked');
+                    this.app.supabase.signOut();
+                });
                 // Sync modal
                 document.getElementById('sync-category').addEventListener('change', (e) => {
                     const customInput = document.getElementById('sync-category-custom');
@@ -4340,10 +4457,14 @@
                     this.submitSync();
                 });
 
-                // Public gallery filters
+                // Public gallery filters - DEBOUNCED SEARCH
                 document.getElementById('public-search').addEventListener('input', (e) => {
-                    this.publicFilters.search = e.target.value;
-                    this.loadPublicGallery();
+                    clearTimeout(this.searchDebounceTimer);
+                    this.searchDebounceTimer = setTimeout(() => {
+                        this.publicFilters.search = e.target.value;
+                        this.resetPublicGallery(); // Сброс при новом поиске
+                        this.loadPublicGallery();
+                    }, 500); // 500ms задержка
                 });
 
                 document.querySelectorAll('.category-filter').forEach(btn => {
@@ -4359,6 +4480,7 @@
                             e.target.classList.add('active');
                         }
 
+                        this.resetPublicGallery();
                         this.loadPublicGallery();
                     });
                 });
@@ -4372,10 +4494,28 @@
 
                 document.getElementById('public-filters').style.display = tab === 'public' ? 'block' : 'none';
 
+                // Очищаем контейнер перед переключением
+                const container = document.getElementById('gallery-content');
+                container.innerHTML = '';
+
                 if (tab === 'my') {
                     this.renderMyModels();
                 } else {
-                    this.loadPublicGallery();
+                    // Если есть кэш - просто рендерим, иначе загружаем
+                    if (this.publicCache.length > 0) {
+                        // Пересоздаём sentinel и loading
+                        container.insertAdjacentHTML('beforeend', `
+                <div id="gallery-sentinel" style="height: 1px;"></div>
+                <div id="gallery-loading" style="padding: 20px; text-align: center; color: #aaa; display: none;">
+                    Loading more...
+                </div>
+            `);
+                        this.renderPublicModels();
+                        this.setupIntersectionObserver();
+                    } else {
+                        this.resetPublicGallery();
+                        this.loadPublicGallery();
+                    }
                 }
             }
 
@@ -4520,26 +4660,100 @@
                 });
             }
 
-            async loadPublicGallery() {
+            resetPublicGallery() {
+                this.publicCache = [];
+                this.publicPage = 0;
+                this.publicHasMore = true;
+            }
+
+            setupIntersectionObserver() {
+                // Удаляем старый observer если есть
+                if (this.intersectionObserver) {
+                    this.intersectionObserver.disconnect();
+                }
+
+                const sentinel = document.getElementById('gallery-sentinel');
+                if (!sentinel) return;
+
+                this.intersectionObserver = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting && this.publicHasMore && !this.publicLoading) {
+                        this.loadMorePublicModels();
+                    }
+                }, {
+                    root: document.getElementById('gallery-content').parentElement,
+                    threshold: 0.1
+                });
+
+                this.intersectionObserver.observe(sentinel);
+            }
+
+            async loadMorePublicModels() {
+                if (this.publicLoading || !this.publicHasMore) {
+                    console.log('Skip loading: already loading or no more data');
+                    return;
+                }
+
+                console.log('Loading page:', this.publicPage);
+
+                this.publicLoading = true;
+                const loadingEl = document.getElementById('gallery-loading');
+                if (loadingEl) loadingEl.style.display = 'block';
+
+                try {
+                    const newModels = await this.app.supabase.loadPublicModels(
+                        this.publicFilters,
+                        this.publicPage * this.publicPageSize,
+                        this.publicPageSize
+                    );
+
+                    console.log('Loaded models:', newModels.length);
+
+                    if (newModels.length < this.publicPageSize) {
+                        this.publicHasMore = false;
+                        console.log('No more models to load');
+                    }
+
+                    if (newModels.length > 0) {
+                        this.publicCache.push(...newModels);
+                        this.publicPage++;
+                        this.renderPublicModels();
+                    }
+                } catch (error) {
+                    console.error('Load more error:', error);
+                    Utils.showNotification('Failed to load models', 'error');
+                } finally {
+                    this.publicLoading = false;
+                    if (loadingEl) loadingEl.style.display = 'none';
+                }
+            }
+
+            renderPublicModels() {
                 const container = document.getElementById('gallery-content');
-                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #aaa;">Loading...</div>';
 
-                const models = await this.app.supabase.loadPublicModels(this.publicFilters);
+                // Сохраняем sentinel и loading если есть
+                const sentinel = document.getElementById('gallery-sentinel');
+                const loading = document.getElementById('gallery-loading');
 
-                container.innerHTML = '';
+                // Удаляем только карточки моделей
+                Array.from(container.children).forEach(child => {
+                    if (child !== sentinel && child !== loading) {
+                        child.remove();
+                    }
+                });
 
-                if (models.length === 0) {
+                if (this.publicCache.length === 0 && !this.publicLoading) {
                     container.innerHTML = '<div style="padding: 20px; text-align: center; color: #aaa;">No models found</div>';
                     return;
                 }
 
-                models.forEach(model => {
+                this.publicCache.forEach(model => {
                     const item = document.createElement('div');
                     item.className = 'gallery-item public-gallery-item';
 
                     const img = document.createElement('img');
                     img.src = model.thumbnail;
                     img.alt = model.name;
+                    img.loading = 'lazy'; // Native lazy loading
 
                     // Category badge
                     const categoryBadge = document.createElement('div');
@@ -4560,6 +4774,7 @@
                             e.stopPropagation();
                             if (confirm('Remove this model from public gallery?')) {
                                 await this.app.supabase.adminDeleteModel(model.id);
+                                this.resetPublicGallery();
                                 this.loadPublicGallery();
                             }
                         };
@@ -4573,6 +4788,7 @@
                             e.stopPropagation();
                             if (confirm(`Ban @${model.users.nickname}?`)) {
                                 await this.app.supabase.adminBanUser(model.user_id);
+                                this.resetPublicGallery();
                                 this.loadPublicGallery();
                             }
                         };
@@ -4595,14 +4811,53 @@
                     const info = document.createElement('div');
                     info.className = 'gallery-item-info';
                     info.innerHTML = `
-                <div class="gallery-item-name">${model.name}</div>
-                <div class="gallery-item-author">@${model.users.nickname}</div>
-            `;
+            <div class="gallery-item-name">${model.name}</div>
+            <div class="gallery-item-author">@${model.users.nickname}</div>
+        `;
                     item.appendChild(info);
 
                     item.appendChild(img);
-                    container.appendChild(item);
+
+                    // Вставляем перед sentinel
+                    if (sentinel) {
+                        container.insertBefore(item, sentinel);
+                    } else {
+                        container.appendChild(item);
+                    }
                 });
+            }
+
+            async loadPublicGallery() {
+                const container = document.getElementById('gallery-content');
+
+                // Первая загрузка - показываем loading
+                if (this.publicCache.length === 0) {
+                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: #aaa;">Loading...</div>';
+                }
+
+                try {
+                    await this.loadMorePublicModels();
+
+                    const initialLoading = document.getElementById('initial-loading');
+                    if (initialLoading) {
+                        initialLoading.remove();
+                    }
+
+                    // После первой загрузки добавляем sentinel для infinite scroll
+                    if (!document.getElementById('gallery-sentinel')) {
+                        container.insertAdjacentHTML('beforeend', `
+                <div id="gallery-sentinel" style="height: 1px;"></div>
+                <div id="gallery-loading" style="padding: 20px; text-align: center; color: #aaa; display: none;">
+                    Loading more...
+                </div>
+            `);
+                        this.setupIntersectionObserver();
+                    }
+
+                } catch (error) {
+                    console.error('Gallery load failed:', error);
+                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: #f44336;">Failed to load. <button onclick="weaponConstructor.gallery.loadPublicGallery()" class="btn btn-primary btn-sm">Retry</button></div>';
+                }
             }
 
             showSyncModal(model) {
